@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GrowFood — Аналитика</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f1117; color: #e5e5e5; min-height: 100vh; }
+    .header { background: #1a1d27; border-bottom: 1px solid #2a2d3a; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; }
+    .header h1 { font-size: 18px; font-weight: 600; color: #fff; }
+    .header span { font-size: 12px; color: #888; }
+    .container { max-width: 1400px; margin: 0 auto; padding: 24px; }
+    .updated { font-size: 12px; color: #666; margin-bottom: 20px; }
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 32px; }
+    .card { background: #1a1d27; border: 1px solid #2a2d3a; border-radius: 12px; padding: 20px; }
+    .card .label { font-size: 12px; color: #888; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .card .value { font-size: 28px; font-weight: 700; color: #fff; }
+    .card .delta { font-size: 12px; margin-top: 4px; }
+    .delta.positive { color: #4ade80; }
+    .delta.negative { color: #f87171; }
+    .card.highlight { border-color: #6366f1; }
+    .card.highlight .value { color: #818cf8; }
+    .charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 24px; }
+    .chart-box { background: #1a1d27; border: 1px solid #2a2d3a; border-radius: 12px; padding: 20px; }
+    .chart-box h3 { font-size: 14px; font-weight: 600; margin-bottom: 16px; color: #fff; }
+    .chart-box canvas { max-height: 300px; }
+    .loading { text-align: center; padding: 40px; color: #666; }
+    .error { background: #2a1a1a; border: 1px solid #f87171; border-radius: 8px; padding: 16px; color: #f87171; margin-bottom: 20px; }
+    @media (max-width: 768px) { .charts { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🌱 GrowFood Analytics</h1>
+    <span id="updated"></span>
+  </div>
+  <div class="container">
+    <div id="error-box" class="error" style="display:none"></div>
+    <div id="loading" class="loading">Загрузка данных...</div>
+    <div id="content" style="display:none">
+      <div class="cards" id="cards"></div>
+      <div class="charts">
+        <div class="chart-box">
+          <h3>ГФ/Приём vs План</h3>
+          <canvas id="chart-gf-plan"></canvas>
+        </div>
+        <div class="chart-box">
+          <h3>Ритейл vs План</h3>
+          <canvas id="chart-retail-plan"></canvas>
+        </div>
+        <div class="chart-box">
+          <h3>Приведённая производительность</h3>
+          <canvas id="chart-productivity"></canvas>
+        </div>
+        <div class="chart-box">
+          <h3>LAAS</h3>
+          <canvas id="chart-laas"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = 'https://script.google.com/macros/s/AKfycbzPr2F50egG1jeynWjNsFPIl_8H7Fdtle1o7qIJMYv0mmaMmwvJAhDaBYSvH_nN7WvN/exec';
+    const MONTHS_RU = { '❄️ январь 2026':'Янв 2026','❄️ февраль 2026':'Фев 2026','🌿 март 2026':'Мар 2026','🌱 Текущий месяц':'Апр 2026','🌿 май 2026':'Май 2026','☀️ июнь 2026':'Июн 2026','☀️ июль 2026':'Июл 2026','☀️ август 2026':'Авг 2026','🍂 сентябрь 2026':'Сен 2026','🍂 октябрь 2026':'Окт 2026','🍂 ноябрь 2026':'Ноя 2026','❄️ декабрь 2026':'Дек 2026' };
+    const COLORS = ['#6366f1','#22d3ee','#4ade80','#f59e0b','#f87171','#a78bfa','#34d399','#fbbf24'];
+
+    let allData = {};
+
+    async function load() {
+      try {
+        const res = await fetch(API_URL);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const json = await res.json();
+        allData = normalizeData(json.rows || []);
+        document.getElementById('updated').textContent = 'Обновлено: ' + new Date(json.updated).toLocaleString('ru-RU');
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('content').style.display = 'block';
+        renderCards();
+        renderCharts();
+      } catch (e) {
+        document.getElementById('loading').style.display = 'none';
+        const err = document.getElementById('error-box');
+        err.style.display = 'block';
+        err.textContent = 'Ошибка загрузки: ' + e.message;
+      }
+    }
+
+    function normalizeData(rows) {
+      const result = {};
+      let currentMonth = null;
+      let currentDates = [];
+      rows.forEach(row => {
+        if (MONTHS_RU[row['Либ']]) {
+          currentMonth = MONTHS_RU[row['Либ']];
+          result[currentMonth] = { dates: [], metrics: {} };
+        } else if (row['Блок данных'] && String(row['Блок данных']).match(/^\d{2}\s\w{2}/)) {
+          currentDates = Object.values(row).filter(v => String(v).match(/^\d{2}\s\w{2}/));
+        } else if (row['Показатель'] && currentMonth) {
+          const metric = row['Показатель'];
+          if (!result[currentMonth].metrics[metric]) result[currentMonth].metrics[metric] = [];
+          const vals = Object.values(row).slice(3).filter(v => v !== '' && v !== null && v !== undefined);
+          result[currentMonth].metrics[metric].push(...vals);
+        }
+      });
+      return result;
+    }
+
+    function getLatestValue(metric) {
+      for (const month of Object.values(allData)) {
+        if (month.metrics[metric]) {
+          const vals = month.metrics[metric].flat().filter(v => typeof v === 'number' && v > 0);
+          if (vals.length) return vals[vals.length - 1];
+        }
+      }
+      return null;
+    }
+
+    function renderCards() {
+      const cards = document.getElementById('cards');
+      const metrics = [
+        { label: 'ГФ/Приём (сегодня)', metric: 'ГФ/Приём' },
+        { label: 'Ритейл (сегодня)', metric: 'Ритейл' },
+        { label: 'Доля кастома', metric: 'доля кастома', format: v => (v * 100).toFixed(1) + '%' },
+        { label: 'LAAS (сегодня)', metric: 'LAAS' },
+        { label: 'Прив. производительность', metric: 'Приведённая производительность' },
+        { label: 'Человеко-часы', metric: 'Человеко-часы' },
+      ];
+      cards.innerHTML = metrics.map(m => {
+        const val = getLatestValue(m.metric);
+        const display = val ? (m.format ? m.format(val) : val.toLocaleString('ru-RU')) : '—';
+        return `<div class="card"><div class="label">${m.label}</div><div class="value">${display}</div></div>`;
+      }).join('');
+    }
+
+    function renderCharts() {
+      const months = Object.keys(allData);
+      const metrics = ['ГФ/Приём','План - ГФ/Приём','Ритейл','План - Ритейл','LAAS','План - LAAS','Приведённая производительность','План - Приведённая производительность'];
+      
+      function monthData(metric) {
+        return months.map(m => {
+          const vals = (allData[m].metrics[metric] || []).flat().filter(v => typeof v === 'number' && v > 0);
+          return vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : 0;
+        });
+      }
+
+      function sumMonthData(metric) {
+        return months.map(m => {
+          const vals = (allData[m].metrics[metric] || []).flat().filter(v => typeof v === 'number' && v > 0);
+          return vals.reduce((a,b)=>a+b,0);
+        });
+      }
+
+      const opts = { responsive: true, plugins: { legend: { labels: { color: '#888' } } }, scales: { x: { ticks: { color: '#888' }, grid: { color:'#2a2d3a' } }, y: { ticks: { color: '#888' }, grid: { color:'#2a2d3a' } } } };
+      
+      new Chart(document.getElementById('chart-gf-plan'), { type:'bar', data:{ labels: months, datasets: [{ label:'ГФ/Приём', data: sumMonthData('ГФ/Приём'), backgroundColor:'#6366f1' }, { label:'План', data: sumMonthData('План - ГФ/Приём'), backgroundColor:'#3a3d5a' }] }, options: { ...opts, plugins: { ...opts.plugins, tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + ctx.raw.toLocaleString() } } } } });
+      new Chart(document.getElementById('chart-retail-plan'), { type:'bar', data:{ labels: months, datasets: [{ label:'Ритейл', data: sumMonthData('Ритейл'), backgroundColor:'#22d3ee' }, { label:'План', data: sumMonthData('План - Ритейл'), backgroundColor:'#3a3d5a' }] }, options: { ...opts, plugins: { ...opts.plugins, tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + ctx.raw.toLocaleString() } } } } });
+      new Chart(document.getElementById('chart-productivity'), { type:'line', data:{ labels: months, datasets: [{ label:'Факт', data: monthData('Приведённая производительность'), borderColor:'#4ade80', tension:0.3 }, { label:'План', data: monthData('План - Приведённая производительность'), borderColor:'#4ade8033', borderDash:[5,5], tension:0.3 }] }, options: opts });
+      new Chart(document.getElementById('chart-laas'), { type:'bar', data:{ labels: months, datasets: [{ label:'LAAS', data: sumMonthData('LAAS'), backgroundColor:'#f59e0b' }, { label:'План', data: sumMonthData('План - LAAS'), backgroundColor:'#3a3d5a' }] }, options: { ...opts, plugins: { ...opts.plugins, tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + ctx.raw.toLocaleString() } } } } });
+    }
+
+    load();
+  </script>
+</body>
+</html>
