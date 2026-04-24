@@ -109,6 +109,9 @@ const MONTH_NAMES = {
   '🍂 октябрь 2026': 'Октябрь', '🍂 ноябрь 2026': 'Ноябрь', '❄️ декабрь 2026': 'Декабрь'
 };
 
+// Metrics that are already percentages (0.73 = 73%)
+const PERCENTAGE_METRICS = ['доля кастома', 'Доля Ритейла из производительности'];
+
 let rawData = [];
 let currentTab = 'day';
 let charts = [];
@@ -160,17 +163,6 @@ function getMonthKey(rawMonth) {
   return MONTH_NAMES[rawMonth] || rawMonth;
 }
 
-function getMonthData(monthRaw) {
-  const result = [];
-  const entries = getEntries('ГФ/Приём').filter(e => e.month === monthRaw);
-  if (entries.length) {
-    entries[0].values.forEach((v, i) => {
-      if (typeof v === 'number' && v > 0) result.push({ day: i + 1, value: v });
-    });
-  }
-  return result;
-}
-
 // Get all months in order
 function getAllMonths() {
   const months = [];
@@ -179,6 +171,12 @@ function getAllMonths() {
     if (m && !months.includes(m)) months.push(m);
   });
   return months;
+}
+
+// Get current month (last one in data)
+function getCurrentMonth() {
+  const months = getAllMonths();
+  return months[months.length - 1] || 'Апрель';
 }
 
 // Sum array
@@ -190,20 +188,112 @@ function fmt(v) {
   return Number(v).toLocaleString('ru-RU', { maximumFractionDigits: 0 });
 }
 
+// Format percentage
+function fmtPct(v) {
+  if (v === null || v === undefined) return '—';
+  const capped = Math.min(100, Math.max(0, v));
+  return capped.toFixed(1) + '%';
+}
+
 // Calculate % change
 function pctChange(current, previous) {
   if (!previous || previous === 0) return null;
   return ((current - previous) / previous * 100);
 }
 
-// Aggregate daily data into weeks (Mon-Sun)
-function aggregateWeeks(dailyData) {
-  const weeks = [];
-  for (let i = 0; i < dailyData.length; i += 7) {
-    const weekData = dailyData.slice(i, i + 7);
-    weeks.push({ label: 'Нед. ' + Math.ceil((i + 1) / 7), total: sum(weekData), days: weekData });
+// Check if metric is a percentage type
+function isPercentageMetric(metric) {
+  return PERCENTAGE_METRICS.includes(metric);
+}
+
+// Get last 7 days values from current month
+function getLast7Days() {
+  const currentMonth = getCurrentMonth();
+  const entries = getEntries('ГФ/Приём').filter(e => getMonthKey(e.month) === currentMonth);
+  if (!entries.length) return [];
+  const vals = entries[0].values;
+  // Take last 7 days (or all if less than 7)
+  return vals.slice(-7).filter(v => typeof v === 'number' && v > 0);
+}
+
+// Get last non-zero value from current month
+function getLastDayValue(metric) {
+  const currentMonth = getCurrentMonth();
+  const entries = getEntries(metric).filter(e => getMonthKey(e.month) === currentMonth);
+  if (!entries.length) return 0;
+  const vals = entries[0].values;
+  // Find last non-zero value
+  for (let i = vals.length - 1; i >= 0; i--) {
+    if (typeof vals[i] === 'number' && vals[i] > 0) return vals[i];
   }
-  return weeks;
+  return 0;
+}
+
+// Get sum of last 7 days for a metric
+function getLast7DaysSum(metric) {
+  const currentMonth = getCurrentMonth();
+  const entries = getEntries(metric).filter(e => getMonthKey(e.month) === currentMonth);
+  if (!entries.length) return 0;
+  const vals = entries[0].values;
+  const last7 = vals.slice(-7);
+  return sum(last7.filter(v => typeof v === 'number' && v > 0));
+}
+
+// Get sum of current month for a metric
+function getCurrentMonthSum(metric) {
+  const currentMonth = getCurrentMonth();
+  const entries = getEntries(metric).filter(e => getMonthKey(e.month) === currentMonth);
+  if (!entries.length) return 0;
+  return sum(entries[0].values.filter(v => typeof v === 'number' && v > 0));
+}
+
+// Aggregate all daily values into 12 weeks (week 1 = days 1-7, week 2 = days 8-14, etc.)
+function aggregateAllDaysToWeeks() {
+  const weeks = [];
+  const weekData = { 'ГФ/Приём': [], 'Ритейл': [], 'LAAS': [], 'Приведённая производительность': [] };
+  
+  // Collect all daily values from all months in order
+  const allDays = [];
+  getAllMonths().forEach(month => {
+    ['ГФ/Приём', 'Ритейл', 'LAAS', 'Приведённая производительность'].forEach(metric => {
+      const entries = getEntries(metric).filter(e => getMonthKey(e.month) === month);
+      entries.forEach(e => {
+        e.values.forEach((v, dayIdx) => {
+          if (!allDays[dayIdx]) allDays[dayIdx] = {};
+          if (typeof v === 'number' && v > 0) {
+            if (!allDays[dayIdx][metric]) allDays[dayIdx][metric] = 0;
+            allDays[dayIdx][metric] += v;
+          }
+        });
+      });
+    });
+  });
+  
+  // Group into weeks (week 1 = days 0-6, week 2 = days 7-13, etc.)
+  for (let i = 0; i < 84 && i < allDays.length; i += 7) {
+    const weekIdx = Math.floor(i / 7);
+    const weekDays = allDays.slice(i, i + 7);
+    
+    ['ГФ/Приём', 'Ритейл', 'LAAS', 'Приведённая производительность'].forEach(metric => {
+      if (!weekData[metric][weekIdx]) weekData[metric][weekIdx] = 0;
+      weekDays.forEach(day => {
+        if (day && day[metric]) weekData[metric][weekIdx] += day[metric];
+      });
+    });
+  }
+  
+  // Generate labels for last 12 weeks
+  const totalWeeks = weekData['ГФ/Приём'].length;
+  for (let i = Math.max(0, totalWeeks - 12); i < totalWeeks; i++) {
+    weeks.push('Нед. ' + (i + 1));
+  }
+  
+  // Slice to last 12 weeks
+  Object.keys(weekData).forEach(k => {
+    weekData[k] = weekData[k].slice(-12);
+  });
+  
+  return { labels: weeks, data: weekData };
 }
 
 // ============ RENDER ============
@@ -219,121 +309,61 @@ function renderPeriodInfo() {
   const months = getAllMonths();
   let text = '';
   if (currentTab === 'day') {
-    const currentMonth = months[months.length - 1] || 'Текущий';
-    text = `📅 День: ${currentMonth} 2026 — дневные данные`;
+    text = `📅 День: ${getCurrentMonth()} 2026 — последний день`;
   } else if (currentTab === 'week') {
     text = `📊 Неделя: Последние 12 недель — недельная агрегация`;
   } else {
-    text = `📆 Месяц: ${months.length} месяцев (весь год) — помесячная агрегация`;
+    text = `📆 Месяц: ${getCurrentMonth()} 2026 — полный месяц`;
   }
   document.getElementById('period-info').textContent = text;
 }
 
 function renderCards() {
   const container = document.getElementById('cards');
-  const months = getAllMonths();
+  const currentMonth = getCurrentMonth();
   
-  // Calculate aggregates based on current tab
-  let gfPriom = 0, retail = 0, laas = 0, perf = 0, hours = 0;
-  let prevGf = 0, prevRetail = 0;
+  // Calculate values based on tab
+  let gfPriom, retail, laas, share, shareRetail;
   
   if (currentTab === 'day') {
-    // Current month daily
-    const lastMonthRaw = rawData.find(r => r.metric === 'ГФ/Приём');
-    if (lastMonthRaw) {
-      const vals = lastMonthRaw.values.filter(v => typeof v === 'number' && v > 0);
-      gfPriom = vals.length ? vals[vals.length - 1] : 0;
-    }
-    const retailEntry = rawData.find(r => r.metric === 'Ритейл');
-    if (retailEntry) {
-      const vals = retailEntry.values.filter(v => typeof v === 'number' && v > 0);
-      retail = vals.length ? vals[vals.length - 1] : 0;
-    }
-    const laasEntry = rawData.find(r => r.metric === 'LAAS');
-    if (laasEntry) {
-      const vals = laasEntry.values.filter(v => typeof v === 'number' && v > 0);
-      laas = vals.length ? vals[vals.length - 1] : 0;
-    }
+    // Last single day's value
+    gfPriom = getLastDayValue('ГФ/Приём');
+    retail = getLastDayValue('Ритейл');
+    laas = getLastDayValue('LAAS');
+    share = getLastDayValue('доля кастома');
+    shareRetail = getLastDayValue('Доля Ритейла из производительности');
   } else if (currentTab === 'week') {
-    // Last 12 weeks totals
-    const last12 = months.slice(-12);
-    gfPriom = calcMetricTotal('ГФ/Приём', last12);
-    retail = calcMetricTotal('Ритейл', last12);
-    laas = calcMetricTotal('LAAS', last12);
-    const prev12 = months.slice(-24, -12);
-    prevGf = calcMetricTotal('ГФ/Приём', prev12);
-    prevRetail = calcMetricTotal('Ритейл', prev12);
+    // Sum of last 7 days
+    gfPriom = getLast7DaysSum('ГФ/Приём');
+    retail = getLast7DaysSum('Ритейл');
+    laas = getLast7DaysSum('LAAS');
+    share = getLastDayValue('доля кастома'); // percentage - use last value
+    shareRetail = getLastDayValue('Доля Ритейла из производительности');
   } else {
-    // Full year monthly
-    gfPriom = calcMetricTotal('ГФ/Приём', months);
-    retail = calcMetricTotal('Ритейл', months);
-    laas = calcMetricTotal('LAAS', months);
-    const prevYear = getPreviousPeriodMonths(months);
-    prevGf = calcMetricTotal('ГФ/Приём', prevYear);
-    prevRetail = calcMetricTotal('Ритейл', prevYear);
+    // Sum of entire current month
+    gfPriom = getCurrentMonthSum('ГФ/Приём');
+    retail = getCurrentMonthSum('Ритейл');
+    laas = getCurrentMonthSum('LAAS');
+    share = getLastDayValue('доля кастома'); // percentage - use last value
+    shareRetail = getLastDayValue('Доля Ритейла из производительности');
   }
   
-  // Get latest values for other metrics
-  const hoursEntry = rawData.find(r => r.metric === 'Человеко-часы');
-  if (hoursEntry) {
-    const vals = hoursEntry.values.filter(v => typeof v === 'number' && v > 0);
-    hours = vals.length ? vals[vals.length - 1] : 0;
-  }
-  
-  const perfEntry = rawData.find(r => r.metric === 'Приведённая производительность');
-  if (perfEntry) {
-    const vals = perfEntry.values.filter(v => typeof v === 'number' && v > 0);
-    perf = vals.length ? sum(vals) : 0;
-  }
+  // Format percentage values (multiply by 100, cap at 100%)
+  const sharePct = share > 0 ? Math.min(100, share * 100) : 0;
+  const shareRetailPct = shareRetail > 0 ? Math.min(100, shareRetail * 100) : 0;
   
   const cards = [
-    { label: 'ГФ/Приём', value: fmt(gfPriom), delta: pctChange(gfPriom, prevGf) },
-    { label: 'Ритейл', value: fmt(retail), delta: pctChange(retail, prevRetail) },
-    { label: 'LAAS', value: fmt(laas), delta: null },
-    { label: 'Производительность', value: fmt(perf), delta: null },
-    { label: 'Человеко-часы', value: fmt(hours), delta: null },
-    { label: 'Доля кастома', value: calcShare(), delta: null, highlight: true }
+    { label: 'ГФ/Приём', value: fmt(gfPriom) },
+    { label: 'Ритейл', value: fmt(retail) },
+    { label: 'LAAS', value: fmt(laas) },
+    { label: 'Доля кастома', value: fmtPct(sharePct), highlight: true },
+    { label: 'Доля Ритейла', value: fmtPct(shareRetailPct), highlight: true }
   ];
   
   container.innerHTML = cards.map(c => {
-    const deltaHtml = c.delta !== null ? 
-      `<div class="delta ${c.delta >= 0 ? 'up' : 'down'}">${c.delta >= 0 ? '↑' : '↓'} ${Math.abs(c.delta).toFixed(1)}%</div>` : '';
     const hl = c.highlight ? ' highlight' : '';
-    return `<div class="card${hl}"><div class="label">${c.label}</div><div class="value">${c.value}</div>${deltaHtml}</div>`;
+    return `<div class="card${hl}"><div class="label">${c.label}</div><div class="value">${c.value}</div></div>`;
   }).join('');
-}
-
-function calcMetricTotal(metric, months) {
-  let total = 0;
-  getEntries(metric).forEach(entry => {
-    const m = getMonthKey(entry.month);
-    if (months.includes(m)) {
-      total += sum(entry.values.filter(v => typeof v === 'number' && v > 0));
-    }
-  });
-  return total;
-}
-
-function calcShare() {
-  const gf = latestRawValue('ГФ/Приём');
-  const retail = latestRawValue('Ритейл');
-  if (!gf) return '—';
-  return ((retail / gf) * 100).toFixed(1) + '%';
-}
-
-function latestRawValue(metric) {
-  const entries = getEntries(metric);
-  if (!entries.length) return 0;
-  const vals = entries[entries.length - 1].values.filter(v => typeof v === 'number' && v > 0);
-  return vals.length ? vals[vals.length - 1] : 0;
-}
-
-function getPreviousPeriodMonths(months) {
-  // Map to previous period months (e.g. ['Январь','Февраль'] -> ['Декабрь','Ноябрь'] of prev year)
-  return months.map((m, i) => {
-    const idx = MONTH_ORDER.indexOf(m);
-    return MONTH_ORDER[(idx + 6) % 12]; // rough previous half-year
-  });
 }
 
 // ============ MAIN CHARTS ============
@@ -361,25 +391,17 @@ function renderMainCharts() {
 }
 
 function getChartConfig() {
-  const months = getAllMonths();
-  
   if (currentTab === 'day') {
-    // Daily view - current month only
-    return getDayChartConfig(months[months.length - 1] || 'Январь');
+    return getDayChartConfig(getCurrentMonth());
   } else if (currentTab === 'week') {
-    // Weekly view - last 12 weeks
-    return getWeekChartConfig(months.slice(-12));
+    return getWeekChartConfig();
   } else {
-    // Monthly view - all months
-    return getMonthChartConfig(months);
+    return getMonthChartConfig(getAllMonths());
   }
 }
 
-function getDayChartConfig(currentMonthRaw) {
-  const entries = getEntries('ГФ/Приём').filter(e => {
-    const m = getMonthKey(e.month);
-    return m === currentMonthRaw;
-  });
+function getDayChartConfig(currentMonth) {
+  const entries = getEntries('ГФ/Приём').filter(e => getMonthKey(e.month) === currentMonth);
   
   let days = [];
   if (entries.length) {
@@ -388,9 +410,9 @@ function getDayChartConfig(currentMonthRaw) {
   
   return [
     {
-      title: `ГФ/Приём — ${currentMonthRaw}`,
+      title: `ГФ/Приём — ${currentMonth}`,
       type: 'bar',
-      labels: days.map(d => d + ' ' + currentMonthRaw.slice(0,3)),
+      labels: days.map(d => d + ' ' + currentMonth.slice(0,3)),
       datasets: [
         {
           label: 'ГФ/Приём',
@@ -402,79 +424,47 @@ function getDayChartConfig(currentMonthRaw) {
   ];
 }
 
-function getWeekChartConfig(recentMonths) {
-  // Aggregate by weeks across recent months
-  const weeks = [];
-  const weekData = { 'ГФ/Приём': [], 'Ритейл': [], 'LAAS': [] };
-  
-  recentMonths.forEach(month => {
-    getEntries('ГФ/Приём').filter(e => getMonthKey(e.month) === month).forEach(e => {
-      const vals = e.values.filter(v => typeof v === 'number' && v > 0);
-      // Aggregate into weeks
-      for (let i = 0; i < vals.length; i += 7) {
-        const weekIdx = weeks.length;
-        const weekVals = vals.slice(i, i + 7);
-        if (!weekData['ГФ/Приём'][weekIdx]) {
-          weeks.push('Нед. ' + (weekIdx + 1));
-          weekData['ГФ/Приём'][weekIdx] = 0;
-          weekData['Ритейл'][weekIdx] = 0;
-          weekData['LAAS'][weekIdx] = 0;
-        }
-        weekData['ГФ/Приём'][weekIdx] += sum(weekVals);
-      }
-    });
-    
-    getEntries('Ритейл').filter(e => getMonthKey(e.month) === month).forEach(e => {
-      const vals = e.values.filter(v => typeof v === 'number' && v > 0);
-      for (let i = 0; i < vals.length; i += 7) {
-        const weekIdx = weeks.length > 0 ? Math.floor(i / 7) : 0;
-        if (weekData['Ритейл'][weekIdx] !== undefined) {
-          weekData['Ритейл'][weekIdx] += sum(vals.slice(i, i + 7));
-        }
-      }
-    });
-  });
-  
-  const last12Labels = weeks.slice(-12);
+function getWeekChartConfig() {
+  const { labels, data } = aggregateAllDaysToWeeks();
   
   return [
     {
       title: 'ГФ/Приём по неделям (последние 12 недель)',
       type: 'bar',
-      labels: last12Labels,
+      labels: labels,
       datasets: [{
         label: 'ГФ/Приём',
-        data: weekData['ГФ/Приём'].slice(-12),
+        data: data['ГФ/Приём'],
         backgroundColor: '#6366f1'
       }]
     },
     {
       title: 'Ритейл по неделям',
       type: 'bar',
-      labels: last12Labels,
+      labels: labels,
       datasets: [{
         label: 'Ритейл',
-        data: weekData['Ритейл'].slice(-12),
+        data: data['Ритейл'],
         backgroundColor: '#22d3ee'
       }]
     },
     {
       title: 'LAAS по неделям',
       type: 'bar',
-      labels: last12Labels,
+      labels: labels,
       datasets: [{
         label: 'LAAS',
-        data: weekData['LAAS'].slice(-12),
+        data: data['LAAS'],
         backgroundColor: '#f59e0b'
       }]
     },
     {
       title: 'Производительность (линия)',
       type: 'line',
-      labels: last12Labels,
+      labels: labels,
       datasets: [{
         label: 'Прив. производительность',
-        data: weekData['ГФ/Приём'].slice(-12).map(v => Math.round(v / 40)),
+        data: data['Приведённая производительность'].map(v => Math.round(v / 40)),
         borderColor: '#4ade80',
         backgroundColor: '#4ade8033',
         fill: true,
@@ -569,9 +559,6 @@ function renderGrowthCharts() {
   // Calculate month-over-month change
   const momData = calcMoMChange(months);
   
-  // Calculate week-over-week change (for last 8 weeks)
-  const wowData = calcWoWChange();
-  
   // Create growth chart configs
   const configs = [
     {
@@ -589,18 +576,6 @@ function renderGrowthCharts() {
         data: momData.retail,
         borderColor: '#22d3ee',
         backgroundColor: '#22d3ee33',
-        fill: true,
-        tension: 0.3
-      }]
-    },
-    {
-      title: '📐 Неделя к неделе (% изменения)',
-      labels: wowData.labels,
-      datasets: [{
-        label: 'ГФ/Приём %',
-        data: wowData.gf,
-        borderColor: '#4ade80',
-        backgroundColor: '#4ade8033',
         fill: true,
         tension: 0.3
       }]
@@ -664,35 +639,6 @@ function calcMoMChange(months) {
   }
   
   return { labels, gfPriom: gfValues, retail: retailValues };
-}
-
-function calcWoWChange() {
-  const labels = [];
-  const gfValues = [];
-  
-  // Aggregate by weeks
-  const allMonths = getAllMonths().slice(-6); // last 6 months for week calc
-  let weeklyGf = [];
-  
-  allMonths.forEach(month => {
-    getEntries('ГФ/Приём').filter(e => getMonthKey(e.month) === month).forEach(e => {
-      const vals = e.values.filter(v => typeof v === 'number' && v > 0);
-      for (let i = 0; i < vals.length; i += 7) {
-        const weekIdx = weeklyGf.length;
-        if (weeklyGf[weekIdx] === undefined) weeklyGf[weekIdx] = 0;
-        weeklyGf[weekIdx] += sum(vals.slice(i, i + 7));
-      }
-    });
-  });
-  
-  // Calculate WoW changes
-  const lastWeeks = weeklyGf.slice(-12);
-  for (let i = 1; i < lastWeeks.length; i++) {
-    labels.push('Нед. ' + (i + 1));
-    gfValues.push(pctChange(lastWeeks[i], lastWeeks[i - 1]));
-  }
-  
-  return { labels, gf: gfValues };
 }
 
 // Initialize
