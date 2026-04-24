@@ -228,27 +228,45 @@ function getLast7Days() {
   return vals.slice(-7).filter(v => typeof v === 'number' && v > 0);
 }
 
-// Get last non-zero value from current month (April/"Текущий месяц")
+// Get last non-zero value across ALL entries and ALL months for a metric
 function getLastDayValue(metric) {
-  const monthKey = '🌱 Текущий месяц';
-  const entries = getEntries(metric).filter(e => e.month === monthKey);
-  if (!entries.length) return 0;
-  const vals = entries[0].values;
+  const allEntries = getEntries(metric);
+  if (!allEntries.length) return 0;
+  
+  // Collect ALL values arrays from ALL entries for this metric
+  let allValues = [];
+  allEntries.forEach(e => {
+    if (Array.isArray(e.values)) {
+      allValues = allValues.concat(e.values);
+    }
+  });
+  
   // Find last non-zero value
-  for (let i = vals.length - 1; i >= 0; i--) {
-    if (typeof vals[i] === 'number' && vals[i] > 0) return vals[i];
+  for (let i = allValues.length - 1; i >= 0; i--) {
+    if (typeof allValues[i] === 'number' && allValues[i] > 0) return allValues[i];
   }
   return 0;
 }
 
-// Get sum of last 7 days for a metric (from April/"Текущий месяц")
+// Get sum of last 7 non-zero values across ALL months for a metric
 function getLast7DaysSum(metric) {
-  const monthKey = '🌱 Текущий месяц';
-  const entries = getEntries(metric).filter(e => e.month === monthKey);
-  if (!entries.length) return 0;
-  const vals = entries[0].values;
-  const last7 = vals.slice(-7);
-  return sum(last7.filter(v => typeof v === 'number' && v > 0));
+  const allEntries = getEntries(metric);
+  if (!allEntries.length) return 0;
+  
+  // Collect ALL values arrays from ALL entries for this metric
+  let allValues = [];
+  allEntries.forEach(e => {
+    if (Array.isArray(e.values)) {
+      allValues = allValues.concat(e.values);
+    }
+  });
+  
+  // Get all non-zero values in order
+  const nonZeroValues = allValues.filter(v => typeof v === 'number' && v > 0);
+  
+  // Take last 7 non-zero values
+  const last7 = nonZeroValues.slice(-7);
+  return sum(last7);
 }
 
 // Get sum of current month for a metric (April/"Текущий месяц")
@@ -263,38 +281,41 @@ function getCurrentMonthSum(metric) {
 function aggregateAllDaysToWeeks() {
   const weeks = [];
   const weekData = { 'ГФ/Приём': [], 'Ритейл': [], 'LAAS': [], 'Приведённая производительность': [] };
+  const metrics = ['ГФ/Приём', 'Ритейл', 'LAAS', 'Приведённая производительность'];
   
-  // Collect all daily values from all months in order
-  const allDays = [];
+  // Collect ALL non-zero values in chronological order across all months
+  // This avoids the month-length mixing problem
+  const allOrderedValues = { 'ГФ/Приём': [], 'Ритейл': [], 'LAAS': [], 'Приведённая производительность': [] };
+  
+  // Iterate through months in calendar order, collecting all non-zero values
   getAllMonths().forEach(month => {
-    ['ГФ/Приём', 'Ритейл', 'LAAS', 'Приведённая производительность'].forEach(metric => {
+    metrics.forEach(metric => {
       const entries = getEntries(metric).filter(e => getMonthKey(e.month) === month);
       entries.forEach(e => {
-        e.values.forEach((v, dayIdx) => {
-          if (!allDays[dayIdx]) allDays[dayIdx] = {};
-          if (typeof v === 'number' && v > 0) {
-            if (!allDays[dayIdx][metric]) allDays[dayIdx][metric] = 0;
-            allDays[dayIdx][metric] += v;
-          }
-        });
+        if (Array.isArray(e.values)) {
+          e.values.forEach(v => {
+            if (typeof v === 'number' && v > 0) {
+              allOrderedValues[metric].push(v);
+            }
+          });
+        }
       });
     });
   });
   
-  // Group into weeks (week 1 = days 0-6, week 2 = days 7-13, etc.)
-  for (let i = 0; i < 84 && i < allDays.length; i += 7) {
+  // Group into weeks: week 1 = positions 0-6, week 2 = positions 7-13, etc.
+  const totalDays = allOrderedValues['ГФ/Приём'].length;
+  for (let i = 0; i < totalDays; i += 7) {
     const weekIdx = Math.floor(i / 7);
-    const weekDays = allDays.slice(i, i + 7);
-    
-    ['ГФ/Приём', 'Ритейл', 'LAAS', 'Приведённая производительность'].forEach(metric => {
+    metrics.forEach(metric => {
+      const weekSlice = allOrderedValues[metric].slice(i, i + 7);
+      const weekSum = sum(weekSlice.filter(v => typeof v === 'number' && v > 0));
       if (!weekData[metric][weekIdx]) weekData[metric][weekIdx] = 0;
-      weekDays.forEach(day => {
-        if (day && day[metric]) weekData[metric][weekIdx] += day[metric];
-      });
+      weekData[metric][weekIdx] += weekSum;
     });
   }
   
-  // Generate labels for last 12 weeks
+  // Generate labels for all weeks
   const totalWeeks = weekData['ГФ/Приём'].length;
   for (let i = Math.max(0, totalWeeks - 12); i < totalWeeks; i++) {
     weeks.push('Нед. ' + (i + 1));
