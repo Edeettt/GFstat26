@@ -7,52 +7,52 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f1117; color: #e5e5e5; min-height: 100vh; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #F7F9F8; color: #1A1A1A; min-height: 100vh; }
     
-    .header { background: #1a1d27; border-bottom: 1px solid #2a2d3a; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
-    .header h1 { font-size: 18px; font-weight: 600; color: #fff; }
-    .header .updated-time { font-size: 12px; color: #666; }
+    .header { background: #FFFFFF; border-bottom: 1px solid #E5E7EB; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+    .header h1 { font-size: 18px; font-weight: 600; color: #1A1A1A; }
+    .header .updated-time { font-size: 12px; color: #6B7280; }
     
     .container { max-width: 1400px; margin: 0 auto; padding: 20px 24px; }
     
     /* Tabs */
-    .tabs { display: flex; gap: 4px; margin-bottom: 24px; background: #1a1d27; border-radius: 12px; padding: 6px; }
-    .tab { padding: 10px 24px; border-radius: 8px; font-size: 14px; font-weight: 500; color: #888; cursor: pointer; transition: all 0.2s; border: none; background: transparent; }
-    .tab:hover { color: #ccc; }
-    .tab.active { background: #6366f1; color: #fff; }
+    .tabs { display: flex; gap: 4px; margin-bottom: 24px; background: #FFFFFF; border-radius: 14px; padding: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); border: 1px solid #E5E7EB; }
+    .tab { padding: 10px 24px; border-radius: 10px; font-size: 14px; font-weight: 500; color: #6B7280; cursor: pointer; transition: all 0.2s; border: none; background: transparent; }
+    .tab:hover { color: #1A1A1A; background: #F7F9F8; }
+    .tab.active { background: #2DBF6A; color: #FFFFFF; }
     
     /* Period badge */
-    .period-info { font-size: 12px; color: #666; margin-bottom: 16px; padding: 8px 16px; background: #1a1d27; border-radius: 8px; display: inline-block; }
+    .period-info { font-size: 12px; color: #6B7280; margin-bottom: 16px; padding: 8px 16px; background: #FFFFFF; border-radius: 8px; display: inline-block; border: 1px solid #E5E7EB; }
     
     /* Cards */
     .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 28px; }
-    .card { background: #1a1d27; border: 1px solid #2a2d3a; border-radius: 10px; padding: 14px; }
-    .card .label { font-size: 10px; color: #888; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; }
-    .card .value { font-size: 20px; font-weight: 700; color: #fff; }
+    .card { background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 14px; padding: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+    .card .label { font-size: 10px; color: #6B7280; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .card .value { font-size: 20px; font-weight: 700; color: #1A1A1A; }
     .card .delta { font-size: 11px; margin-top: 4px; }
-    .card .delta.up { color: #4ade80; }
-    .card .delta.down { color: #f87171; }
-    .card.highlight { border-color: #6366f1; }
-    .card.highlight .value { color: #818cf8; }
+    .card .delta.up { color: #2DBF6A; }
+    .card .delta.down { color: #ef4444; }
+    .card.highlight { border-color: #2DBF6A; }
+    .card.highlight .value { color: #2DBF6A; }
     
     /* Charts */
     .charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 20px; margin-bottom: 24px; }
-    .chart-box { background: #1a1d27; border: 1px solid #2a2d3a; border-radius: 12px; padding: 16px; }
-    .chart-box h3 { font-size: 13px; font-weight: 600; margin-bottom: 12px; color: #ccc; }
+    .chart-box { background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 14px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+    .chart-box h3 { font-size: 13px; font-weight: 600; margin-bottom: 12px; color: #1A1A1A; }
     .chart-box canvas { max-height: 240px; }
     
     /* Growth section */
     .growth-section { margin-top: 24px; }
-    .growth-section h2 { font-size: 15px; font-weight: 600; color: #fff; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid #2a2d3a; display: flex; align-items: center; gap: 8px; }
+    .growth-section h2 { font-size: 15px; font-weight: 600; color: #1A1A1A; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid #E5E7EB; display: flex; align-items: center; gap: 8px; }
     .growth-section h2 span { font-size: 16px; }
     .growth-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 20px; }
     
     /* Loading / Error */
-    .loading { text-align: center; padding: 60px; color: #666; font-size: 14px; }
-    .error { background: #2a1a1a; border: 1px solid #f87171; border-radius: 8px; padding: 16px; color: #f87171; margin-bottom: 20px; display: none; }
+    .loading { text-align: center; padding: 60px; color: #6B7280; font-size: 14px; }
+    .error { background: #FEF2F2; border: 1px solid #fecaca; border-radius: 8px; padding: 16px; color: #ef4444; margin-bottom: 20px; display: none; }
     
     /* Section title */
-    .section-title { font-size: 15px; font-weight: 600; color: #fff; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid #2a2d3a; display: flex; align-items: center; gap: 8px; }
+    .section-title { font-size: 15px; font-weight: 600; color: #1A1A1A; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid #E5E7EB; display: flex; align-items: center; gap: 8px; }
     
     @media (max-width: 768px) {
       .tabs { flex-wrap: wrap; }
@@ -516,7 +516,7 @@ function getMonthChartConfig(months) {
       labels: months,
       datasets: [
         { label: 'ГФ/Приём', data: months.map(m => calcMonthTotal('ГФ/Приём', m)), backgroundColor: '#6366f1' },
-        { label: 'План', data: months.map(m => calcMonthTotal('План - ГФ/Приём', m)), backgroundColor: '#3a3d5a' }
+        { label: 'План', data: months.map(m => calcMonthTotal('План - ГФ/Приём', m)), backgroundColor: '#d1d5db' }
       ]
     },
     {
@@ -525,7 +525,7 @@ function getMonthChartConfig(months) {
       labels: months,
       datasets: [
         { label: 'Ритейл', data: months.map(m => calcMonthTotal('Ритейл', m)), backgroundColor: '#22d3ee' },
-        { label: 'План', data: months.map(m => calcMonthTotal('План - Ритейл', m)), backgroundColor: '#3a3d5a' }
+        { label: 'План', data: months.map(m => calcMonthTotal('План - Ритейл', m)), backgroundColor: '#d1d5db' }
       ]
     },
     {
@@ -534,7 +534,7 @@ function getMonthChartConfig(months) {
       labels: months,
       datasets: [
         { label: 'LAAS', data: months.map(m => calcMonthTotal('LAAS', m)), backgroundColor: '#f59e0b' },
-        { label: 'План', data: months.map(m => calcMonthTotal('План - LAAS', m)), backgroundColor: '#3a3d5a' }
+        { label: 'План', data: months.map(m => calcMonthTotal('План - LAAS', m)), backgroundColor: '#d1d5db' }
       ]
     },
     {
@@ -567,7 +567,7 @@ function getChartOptions(type) {
   const base = {
     responsive: true,
     plugins: {
-      legend: { labels: { color: '#888', font: { size: 11 } } },
+      legend: { labels: { color: '#6B7280', font: { size: 11 } } },
       tooltip: {
         callbacks: {
           label: ctx => ctx.dataset.label + ': ' + (typeof ctx.raw === 'number' ? ctx.raw.toLocaleString('ru-RU', { maximumFractionDigits: 0 }) : ctx.raw)
@@ -575,8 +575,8 @@ function getChartOptions(type) {
       }
     },
     scales: {
-      x: { ticks: { color: '#666', font: { size: 10 } }, grid: { color: '#1e2030' } },
-      y: { ticks: { color: '#666', font: { size: 10 } }, grid: { color: '#1e2030' } }
+      x: { ticks: { color: '#6B7280', font: { size: 10 } }, grid: { color: '#E5E7EB' } },
+      y: { ticks: { color: '#6B7280', font: { size: 10 } }, grid: { color: '#E5E7EB' } }
     }
   };
   return base;
