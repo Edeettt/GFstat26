@@ -8,27 +8,26 @@
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f1117; color: #e5e5e5; min-height: 100vh; }
-    .header { background: #1a1d27; border-bottom: 1px solid #2a2d3a; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; }
+    .header { background: #1a1d27; border-bottom: 1px solid #2a2d3a; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
     .header h1 { font-size: 18px; font-weight: 600; color: #fff; }
-    .header span { font-size: 12px; color: #888; }
+    .header span { font-size: 12px; color: #666; }
     .container { max-width: 1400px; margin: 0 auto; padding: 24px; }
     .updated { font-size: 12px; color: #666; margin-bottom: 20px; }
-    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 32px; }
-    .card { background: #1a1d27; border: 1px solid #2a2d3a; border-radius: 12px; padding: 20px; }
-    .card .label { font-size: 12px; color: #888; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
-    .card .value { font-size: 28px; font-weight: 700; color: #fff; }
-    .card .delta { font-size: 12px; margin-top: 4px; }
-    .delta.positive { color: #4ade80; }
-    .delta.negative { color: #f87171; }
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 32px; }
+    .card { background: #1a1d27; border: 1px solid #2a2d3a; border-radius: 12px; padding: 16px; }
+    .card .label { font-size: 11px; color: #888; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .card .value { font-size: 22px; font-weight: 700; color: #fff; }
     .card.highlight { border-color: #6366f1; }
     .card.highlight .value { color: #818cf8; }
-    .charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 24px; }
-    .chart-box { background: #1a1d27; border: 1px solid #2a2d3a; border-radius: 12px; padding: 20px; }
-    .chart-box h3 { font-size: 14px; font-weight: 600; margin-bottom: 16px; color: #fff; }
-    .chart-box canvas { max-height: 300px; }
-    .loading { text-align: center; padding: 40px; color: #666; }
+    .charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 20px; }
+    .chart-box { background: #1a1d27; border: 1px solid #2a2d3a; border-radius: 12px; padding: 16px; }
+    .chart-box h3 { font-size: 13px; font-weight: 600; margin-bottom: 12px; color: #ccc; }
+    .chart-box canvas { max-height: 260px; }
+    .loading { text-align: center; padding: 60px; color: #666; font-size: 14px; }
     .error { background: #2a1a1a; border: 1px solid #f87171; border-radius: 8px; padding: 16px; color: #f87171; margin-bottom: 20px; }
-    @media (max-width: 768px) { .charts { grid-template-columns: 1fr; } }
+    .month-section { margin-bottom: 32px; }
+    .month-section h2 { font-size: 16px; font-weight: 600; color: #fff; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #2a2d3a; }
+    @media (max-width: 768px) { .charts { grid-template-columns: 1fr; } .cards { grid-template-columns: repeat(2, 1fr); } }
   </style>
 </head>
 <body>
@@ -41,127 +40,181 @@
     <div id="loading" class="loading">Загрузка данных...</div>
     <div id="content" style="display:none">
       <div class="cards" id="cards"></div>
-      <div class="charts">
-        <div class="chart-box">
-          <h3>ГФ/Приём vs План</h3>
-          <canvas id="chart-gf-plan"></canvas>
-        </div>
-        <div class="chart-box">
-          <h3>Ритейл vs План</h3>
-          <canvas id="chart-retail-plan"></canvas>
-        </div>
-        <div class="chart-box">
-          <h3>Приведённая производительность</h3>
-          <canvas id="chart-productivity"></canvas>
-        </div>
-        <div class="chart-box">
-          <h3>LAAS</h3>
-          <canvas id="chart-laas"></canvas>
-        </div>
-      </div>
+      <div id="charts"></div>
     </div>
   </div>
 
-  <script>
-    const API_URL = 'https://script.google.com/macros/s/AKfycbzPr2F50egG1jeynWjNsFPIl_8H7Fdtle1o7qIJMYv0mmaMmwvJAhDaBYSvH_nN7WvN/exec';
-    const MONTHS_RU = { '❄️ январь 2026':'Янв 2026','❄️ февраль 2026':'Фев 2026','🌿 март 2026':'Мар 2026','🌱 Текущий месяц':'Апр 2026','🌿 май 2026':'Май 2026','☀️ июнь 2026':'Июн 2026','☀️ июль 2026':'Июл 2026','☀️ август 2026':'Авг 2026','🍂 сентябрь 2026':'Сен 2026','🍂 октябрь 2026':'Окт 2026','🍂 ноябрь 2026':'Ноя 2026','❄️ декабрь 2026':'Дек 2026' };
-    const COLORS = ['#6366f1','#22d3ee','#4ade80','#f59e0b','#f87171','#a78bfa','#34d399','#fbbf24'];
+<script>
+const API_URL = 'https://script.google.com/macros/s/AKfycbzPr2F50egG1jeynWjNsFPIl_8H7Fdtle1o7qIJMYv0mmaMmwvJAhDaBYSvH_nN7WvN/exec';
+const MONTHS_RU = {
+  '❄️ январь 2026':'Январь 2026','❄️ февраль 2026':'Февраль 2026','🌿 март 2026':'Март 2026',
+  '🌱 Текущий месяц':'Апрель 2026','🌿 май 2026':'Май 2026','☀️ июнь 2026':'Июнь 2026',
+  '☀️ июль 2026':'Июль 2026','☀️ август 2026':'Август 2026','🍂 сентябрь 2026':'Сентябрь 2026',
+  '🍂 октябрь 2026':'Октябрь 2026','🍂 ноябрь 2026':'Ноябрь 2026','❄️ декабрь 2026':'Декабрь 2026'
+};
 
-    let allData = {};
+let rawData = [];
 
-    async function load() {
-      try {
-        const res = await fetch(API_URL);
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        const json = await res.json();
-        allData = normalizeData(json.rows || []);
-        document.getElementById('updated').textContent = 'Обновлено: ' + new Date(json.updated).toLocaleString('ru-RU');
-        document.getElementById('loading').style.display = 'none';
-        document.getElementById('content').style.display = 'block';
-        renderCards();
-        renderCharts();
-      } catch (e) {
-        document.getElementById('loading').style.display = 'none';
-        const err = document.getElementById('error-box');
-        err.style.display = 'block';
-        err.textContent = 'Ошибка загрузки: ' + e.message;
+async function load() {
+  try {
+    const res = await fetch(API_URL);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const json = await res.json();
+    rawData = json.data || [];
+    document.getElementById('updated').textContent = 'Обновлено: ' + new Date(json.updated).toLocaleString('ru-RU');
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('content').style.display = 'block';
+    renderCards();
+    renderCharts();
+  } catch (e) {
+    document.getElementById('loading').style.display = 'none';
+    const err = document.getElementById('error-box');
+    err.style.display = 'block';
+    err.textContent = 'Ошибка загрузки: ' + e.message;
+  }
+}
+
+function getMonthName(raw) {
+  return MONTHS_RU[raw] || raw;
+}
+
+function getMetric(metric) {
+  return rawData.filter(r => r.metric === metric);
+}
+
+function latestValue(metric) {
+  const entries = getMetric(metric);
+  if (!entries.length) return null;
+  const vals = entries[entries.length - 1].values.filter(v => typeof v === 'number' && v > 0);
+  return vals.length ? vals[vals.length - 1] : null;
+}
+
+function monthSums(metric) {
+  const byMonth = {};
+  getMetric(metric).forEach(r => {
+    const m = getMonthName(r.month);
+    if (!byMonth[m]) byMonth[m] = [];
+    byMonth[m].push(...r.values.filter(v => typeof v === 'number' && v > 0));
+  });
+  return byMonth;
+}
+
+function sumOrAvg(arr, sum) {
+  if (!arr.length) return 0;
+  if (sum) return arr.reduce((a,b)=>a+b,0);
+  return arr.reduce((a,b)=>a+b,0)/arr.length;
+}
+
+function renderCards() {
+  const cards = document.getElementById('cards');
+  const metrics = [
+    { label: 'ГФ/Приём (последний)', metric: 'ГФ/Приём' },
+    { label: 'Ритейл (последний)', metric: 'Ритейл' },
+    { label: 'Доля кастома', metric: 'доля кастома', format: v => (v*100).toFixed(1)+'%', highlight: true },
+    { label: 'LAAS (последний)', metric: 'LAAS' },
+    { label: 'Прив. производительность', metric: 'Приведённая производительность' },
+    { label: 'Человеко-часы', metric: 'Человеко-часы' },
+  ];
+  cards.innerHTML = metrics.map(m => {
+    const val = latestValue(m.metric);
+    const display = val ? (m.format ? m.format(val) : Number(val).toLocaleString('ru-RU', {maximumFractionDigits:0})) : '—';
+    const hl = m.highlight ? ' highlight' : '';
+    return `<div class="card${hl}"><div class="label">${m.label}</div><div class="value">${display}</div></div>`;
+  }).join('');
+}
+
+function renderCharts() {
+  const chartsDiv = document.getElementById('charts');
+  chartsDiv.innerHTML = '';
+
+  const months = [...new Set(rawData.map(r => getMonthName(r.month)))].filter(Boolean);
+
+  function makeDataset(metric, color, isLine) {
+    const byMonth = monthSums(metric);
+    const data = months.map(m => {
+      const vals = byMonth[m] || [];
+      return vals.length ? sumOrAvg(vals, false) : 0;
+    });
+    return {
+      label: metric,
+      data,
+      borderColor: color,
+      backgroundColor: isLine ? color + '33' : color,
+      borderWidth: isLine ? 2 : 0,
+      pointRadius: isLine ? 3 : 0,
+      pointBackgroundColor: color,
+      tension: 0.3,
+      fill: isLine,
+      type: isLine ? 'line' : 'bar'
+    };
+  }
+
+  const baseOpts = {
+    responsive: true,
+    plugins: {
+      legend: { labels: { color: '#888', font: { size: 11 } } },
+      tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + (typeof ctx.raw === 'number' ? ctx.raw.toLocaleString('ru-RU', {maximumFractionDigits:1}) : ctx.raw) }
+    },
+      scales: {
+        x: { ticks: { color: '#666', font: { size: 10 } }, grid: { color:'#1e2030' } },
+        y: { ticks: { color: '#666', font: { size: 10 } }, grid: { color:'#1e2030' } }
       }
     }
+  };
 
-    function normalizeData(rows) {
-      const result = {};
-      let currentMonth = null;
-      let currentDates = [];
-      rows.forEach(row => {
-        if (MONTHS_RU[row['Либ']]) {
-          currentMonth = MONTHS_RU[row['Либ']];
-          result[currentMonth] = { dates: [], metrics: {} };
-        } else if (row['Блок данных'] && String(row['Блок данных']).match(/^\d{2}\s\w{2}/)) {
-          currentDates = Object.values(row).filter(v => String(v).match(/^\d{2}\s\w{2}/));
-        } else if (row['Показатель'] && currentMonth) {
-          const metric = row['Показатель'];
-          if (!result[currentMonth].metrics[metric]) result[currentMonth].metrics[metric] = [];
-          const vals = Object.values(row).slice(3).filter(v => v !== '' && v !== null && v !== undefined);
-          result[currentMonth].metrics[metric].push(...vals);
-        }
+  const configs = [
+    { title: 'ГФ/Приём vs План', metrics: [{m:'ГФ/Приём',c:'#6366f1'},{m:'План - ГФ/Приём',c:'#3a3d5a'}], sum: true },
+    { title: 'Ритейл vs План', metrics: [{m:'Ритейл',c:'#22d3ee'},{m:'План - Ритейл',c:'#3a3d5a'}], sum: true },
+    { title: 'Приведённая производительность', metrics: [{m:'Приведённая производительность',c:'#4ade80'},{m:'План - Приведённая производительность',c:'#4ade8044'}], sum: false, line: true },
+    { title: 'LAAS vs План', metrics: [{m:'LAAS',c:'#f59e0b'},{m:'План - LAAS',c:'#3a3d5a'}], sum: true },
+    { title: 'Производительность ГФ/Приём', metrics: [{m:'Производительность ГФ/Приём',c:'#a78bfa'},{m:'План - Приведённая производительность',c:'#3a3d5a'}], sum: false, line: true },
+    { title: 'Производительность Ритейл', metrics: [{m:'Производительность Ритейл',c:'#34d399'},{m:'План - Приведённая производительность',c:'#3a3d5a'}], sum: false, line: true },
+  ];
+
+  // Group by 2 for layout
+  let html = '';
+  for (let i = 0; i < configs.length; i += 2) {
+    html += '<div class="charts" style="grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));">';
+    for (let j = i; j < Math.min(i+2, configs.length); j++) {
+      const cfg = configs[j];
+      const datasets = cfg.metrics.map((m, idx) => {
+        const byMonth = {};
+        getMetric(m.m).forEach(r => {
+          const mn = getMonthName(r.month);
+          if (!byMonth[mn]) byMonth[mn] = [];
+          byMonth[mn].push(...r.values.filter(v => typeof v === 'number' && v > 0));
+        });
+        const data = months.map(mn => {
+          const vals = byMonth[mn] || [];
+          return vals.length ? (cfg.sum ? sumOrAvg(vals,true) : sumOrAvg(vals,false)) : 0;
+        });
+        return {
+          label: m.m,
+          data,
+          borderColor: m.c,
+          backgroundColor: cfg.line && idx === 0 ? m.c + '22' : m.c,
+          borderWidth: cfg.line && idx === 0 ? 2 : 0,
+          pointRadius: cfg.line && idx === 0 ? 2 : 0,
+          tension: 0.3,
+          fill: cfg.line && idx === 0,
+          type: cfg.line && idx === 0 ? 'line' : 'bar'
+        };
       });
-      return result;
-    }
-
-    function getLatestValue(metric) {
-      for (const month of Object.values(allData)) {
-        if (month.metrics[metric]) {
-          const vals = month.metrics[metric].flat().filter(v => typeof v === 'number' && v > 0);
-          if (vals.length) return vals[vals.length - 1];
-        }
-      }
-      return null;
-    }
-
-    function renderCards() {
-      const cards = document.getElementById('cards');
-      const metrics = [
-        { label: 'ГФ/Приём (сегодня)', metric: 'ГФ/Приём' },
-        { label: 'Ритейл (сегодня)', metric: 'Ритейл' },
-        { label: 'Доля кастома', metric: 'доля кастома', format: v => (v * 100).toFixed(1) + '%' },
-        { label: 'LAAS (сегодня)', metric: 'LAAS' },
-        { label: 'Прив. производительность', metric: 'Приведённая производительность' },
-        { label: 'Человеко-часы', metric: 'Человеко-часы' },
-      ];
-      cards.innerHTML = metrics.map(m => {
-        const val = getLatestValue(m.metric);
-        const display = val ? (m.format ? m.format(val) : val.toLocaleString('ru-RU')) : '—';
-        return `<div class="card"><div class="label">${m.label}</div><div class="value">${display}</div></div>`;
-      }).join('');
-    }
-
-    function renderCharts() {
-      const months = Object.keys(allData);
-      const metrics = ['ГФ/Приём','План - ГФ/Приём','Ритейл','План - Ритейл','LAAS','План - LAAS','Приведённая производительность','План - Приведённая производительность'];
-      
-      function monthData(metric) {
-        return months.map(m => {
-          const vals = (allData[m].metrics[metric] || []).flat().filter(v => typeof v === 'number' && v > 0);
-          return vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : 0;
+      html += `<div class="chart-box"><h3>${cfg.title}</h3><canvas id="chart-${j}"></canvas></div>`;
+      setTimeout(() => {
+        new Chart(document.getElementById('chart-'+j), {
+          type: 'bar',
+          data: { labels: months, datasets },
+          options: baseOpts
         });
-      }
-
-      function sumMonthData(metric) {
-        return months.map(m => {
-          const vals = (allData[m].metrics[metric] || []).flat().filter(v => typeof v === 'number' && v > 0);
-          return vals.reduce((a,b)=>a+b,0);
-        });
-      }
-
-      const opts = { responsive: true, plugins: { legend: { labels: { color: '#888' } } }, scales: { x: { ticks: { color: '#888' }, grid: { color:'#2a2d3a' } }, y: { ticks: { color: '#888' }, grid: { color:'#2a2d3a' } } } };
-      
-      new Chart(document.getElementById('chart-gf-plan'), { type:'bar', data:{ labels: months, datasets: [{ label:'ГФ/Приём', data: sumMonthData('ГФ/Приём'), backgroundColor:'#6366f1' }, { label:'План', data: sumMonthData('План - ГФ/Приём'), backgroundColor:'#3a3d5a' }] }, options: { ...opts, plugins: { ...opts.plugins, tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + ctx.raw.toLocaleString() } } } } });
-      new Chart(document.getElementById('chart-retail-plan'), { type:'bar', data:{ labels: months, datasets: [{ label:'Ритейл', data: sumMonthData('Ритейл'), backgroundColor:'#22d3ee' }, { label:'План', data: sumMonthData('План - Ритейл'), backgroundColor:'#3a3d5a' }] }, options: { ...opts, plugins: { ...opts.plugins, tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + ctx.raw.toLocaleString() } } } } });
-      new Chart(document.getElementById('chart-productivity'), { type:'line', data:{ labels: months, datasets: [{ label:'Факт', data: monthData('Приведённая производительность'), borderColor:'#4ade80', tension:0.3 }, { label:'План', data: monthData('План - Приведённая производительность'), borderColor:'#4ade8033', borderDash:[5,5], tension:0.3 }] }, options: opts });
-      new Chart(document.getElementById('chart-laas'), { type:'bar', data:{ labels: months, datasets: [{ label:'LAAS', data: sumMonthData('LAAS'), backgroundColor:'#f59e0b' }, { label:'План', data: sumMonthData('План - LAAS'), backgroundColor:'#3a3d5a' }] }, options: { ...opts, plugins: { ...opts.plugins, tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + ctx.raw.toLocaleString() } } } } });
+      }, 0);
     }
+    html += '</div>';
+  }
+  chartsDiv.innerHTML = html;
+}
 
-    load();
-  </script>
+load();
+</script>
 </body>
 </html>
