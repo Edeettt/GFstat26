@@ -163,18 +163,30 @@ function getMonthKey(rawMonth) {
   return MONTH_NAMES[rawMonth] || rawMonth;
 }
 
-// Get all months in order
+// Get all months in calendar order (Jan→Dec)
 function getAllMonths() {
-  const months = [];
+  const monthSet = [];
   rawData.forEach(r => {
     const m = getMonthKey(r.month);
-    if (m && !months.includes(m)) months.push(m);
+    if (m && !monthSet.includes(m)) monthSet.push(m);
   });
-  return months;
+  // Sort by calendar order using MONTH_ORDER index
+  monthSet.sort((a, b) => {
+    const idxA = MONTH_ORDER.indexOf(a);
+    const idxB = MONTH_ORDER.indexOf(b);
+    return idxA - idxB;
+  });
+  return monthSet;
 }
 
-// Get current month (last one in data)
+// Get current month - explicitly find "🌱 Текущий месяц" (April) which has real data
 function getCurrentMonth() {
+  // First try to find the special "Текущий месяц" entry
+  const currentEntry = rawData.find(r => r.month === '🌱 Текущий месяц');
+  if (currentEntry) {
+    return getMonthKey(currentEntry.month);
+  }
+  // Fallback to last month in calendar order
   const months = getAllMonths();
   return months[months.length - 1] || 'Апрель';
 }
@@ -206,20 +218,20 @@ function isPercentageMetric(metric) {
   return PERCENTAGE_METRICS.includes(metric);
 }
 
-// Get last 7 days values from current month
+// Get last 7 days values from current month (April/"Текущий месяц")
 function getLast7Days() {
-  const currentMonth = getCurrentMonth();
-  const entries = getEntries('ГФ/Приём').filter(e => getMonthKey(e.month) === currentMonth);
+  const monthKey = '🌱 Текущий месяц';
+  const entries = getEntries('ГФ/Приём').filter(e => e.month === monthKey);
   if (!entries.length) return [];
   const vals = entries[0].values;
   // Take last 7 days (or all if less than 7)
   return vals.slice(-7).filter(v => typeof v === 'number' && v > 0);
 }
 
-// Get last non-zero value from current month
+// Get last non-zero value from current month (April/"Текущий месяц")
 function getLastDayValue(metric) {
-  const currentMonth = getCurrentMonth();
-  const entries = getEntries(metric).filter(e => getMonthKey(e.month) === currentMonth);
+  const monthKey = '🌱 Текущий месяц';
+  const entries = getEntries(metric).filter(e => e.month === monthKey);
   if (!entries.length) return 0;
   const vals = entries[0].values;
   // Find last non-zero value
@@ -229,20 +241,20 @@ function getLastDayValue(metric) {
   return 0;
 }
 
-// Get sum of last 7 days for a metric
+// Get sum of last 7 days for a metric (from April/"Текущий месяц")
 function getLast7DaysSum(metric) {
-  const currentMonth = getCurrentMonth();
-  const entries = getEntries(metric).filter(e => getMonthKey(e.month) === currentMonth);
+  const monthKey = '🌱 Текущий месяц';
+  const entries = getEntries(metric).filter(e => e.month === monthKey);
   if (!entries.length) return 0;
   const vals = entries[0].values;
   const last7 = vals.slice(-7);
   return sum(last7.filter(v => typeof v === 'number' && v > 0));
 }
 
-// Get sum of current month for a metric
+// Get sum of current month for a metric (April/"Текущий месяц")
 function getCurrentMonthSum(metric) {
-  const currentMonth = getCurrentMonth();
-  const entries = getEntries(metric).filter(e => getMonthKey(e.month) === currentMonth);
+  const monthKey = '🌱 Текущий месяц';
+  const entries = getEntries(metric).filter(e => e.month === monthKey);
   if (!entries.length) return 0;
   return sum(entries[0].values.filter(v => typeof v === 'number' && v > 0));
 }
@@ -401,7 +413,8 @@ function getChartConfig() {
 }
 
 function getDayChartConfig(currentMonth) {
-  const entries = getEntries('ГФ/Приём').filter(e => getMonthKey(e.month) === currentMonth);
+  const monthKey = Object.entries(MONTH_NAMES).find(([k, v]) => v === currentMonth)?.[0] || '🌱 Текущий месяц';
+  const entries = getEntries('ГФ/Приём').filter(e => e.month === monthKey || getMonthKey(e.month) === currentMonth);
   
   let days = [];
   if (entries.length) {
@@ -412,7 +425,7 @@ function getDayChartConfig(currentMonth) {
     {
       title: `ГФ/Приём — ${currentMonth}`,
       type: 'bar',
-      labels: days.map(d => d + ' ' + currentMonth.slice(0,3)),
+      labels: days.map(d => d),
       datasets: [
         {
           label: 'ГФ/Приём',
