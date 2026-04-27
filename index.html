@@ -62,7 +62,76 @@
       .header { padding: 12px 16px; }
       .container { padding: 16px; }
     }
-  </style>
+  
+    /* Comment tooltip */
+    .cell-comment { position: relative; cursor: pointer; }
+    .cell-comment::after {
+      content: attr(data-comment);
+      display: none;
+      position: absolute;
+      bottom: 110%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1a1a1a;
+      color: #fff;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      white-space: nowrap;
+      max-width: 300px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      z-index: 100;
+      white-space: normal;
+      max-width: 200px;
+    }
+    .cell-comment:hover::after { display: block; }
+    .cell-has-comment { background: #fef3c7; }
+    
+    /* Comment modal */
+    #comment-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 9999;
+      align-items: center;
+      justify-content: center;
+    }
+    #comment-modal.open { display: flex; }
+    .comment-modal-box {
+      background: #fff;
+      border-radius: 14px;
+      padding: 20px;
+      width: 360px;
+      max-width: 90vw;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    }
+    .comment-modal-box h3 { font-size: 14px; margin-bottom: 12px; color: #1a1a1a; }
+    .comment-modal-box textarea {
+      width: 100%;
+      height: 80px;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 8px;
+      font-size: 13px;
+      resize: vertical;
+      box-sizing: border-box;
+    }
+    .comment-modal-box input { width: 100%; border: 1px solid #e5e7eb; border-radius: 8px; padding: 6px 8px; font-size: 12px; margin-top: 8px; }
+    .comment-modal-actions { display: flex; gap: 8px; margin-top: 12px; justify-content: flex-end; }
+    .comment-modal-actions button {
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .btn-cancel { background: #f3f4f6; color: #374151; }
+    .btn-save { background: #2DBF6A; color: #fff; }
+    .btn-delete { background: #ef4444; color: #fff; }
+
+</style>
 </head>
 <body>
   <div class="header">
@@ -750,8 +819,8 @@ function renderBudgetByArticle() {
     html += '<tr style="background:'+alt+'">';
     html += '<td style="padding:6px 10px;border:1px solid #E5E7EB"><span style="font-weight:500">'+art+'</span><br><span style="font-size:10px;color:#6B7280">'+data.desc+'</span></td>';
     html += '<td style="padding:6px 10px;border:1px solid #E5E7EB;text-align:center;font-size:10px;color:#6B7280">план</td>';
-    data.plan.monthly.forEach(v => { html += '<td style="padding:6px 6px;border:1px solid #E5E7EB;text-align:right">'+fmtB(v)+'</td>'; });
-    html += '<td style="padding:6px 6px;border:1px solid #E5E7EB;text-align:right;font-weight:600">'+fmtB(data.plan.Q1)+'</td>';
+    data.plan.monthly.forEach((v, i) => { const tdId = 'c-' + idx + '-p-' + i; html += '<td id="'+tdId+'" style="padding:6px 6px;border:1px solid #E5E7EB;text-align:right">'+fmtB(v)+'</td>'; setTimeout(() => { const td = document.getElementById(tdId); if(td) addCommentHandlers(art, 'план', MONTHS[i], v, td); }, 0); });
+    html += '<td id="q-p-'+idx+'-Q1" style="padding:6px 6px;border:1px solid #E5E7EB;text-align:right;font-weight:600;cursor:pointer">'+fmtB(data.plan.Q1)+'</td>'; setTimeout(() => { const td = document.getElementById('q-p-'+idx+'-Q1'); if(td) addCommentHandlers(art, 'план', 'Q1', data.plan.Q1, td); }, 0);
     html += '<td style="padding:6px 6px;border:1px solid #E5E7EB;text-align:right;font-weight:600;background:#d1fae5">'+fmtB(data.fact.Q1)+'</td>';
     html += '<td style="padding:6px 6px;border:1px solid #E5E7EB;text-align:right;font-weight:600">'+fmtB(data.plan.Q2)+'</td>';
     html += '<td style="padding:6px 6px;border:1px solid #E5E7EB;text-align:right;font-weight:600;background:#d1fae5">'+fmtB(data.fact.Q2)+'</td>';
@@ -759,14 +828,14 @@ function renderBudgetByArticle() {
     html += '<td style="padding:6px 6px;border:1px solid #E5E7EB;text-align:right;font-weight:600;background:#d1fae5">'+fmtB(data.fact.Q3)+'</td>';
     html += '<td style="padding:6px 6px;border:1px solid #E5E7EB;text-align:right;font-weight:600">'+fmtB(data.plan.Q4)+'</td>';
     html += '<td style="padding:6px 6px;border:1px solid #E5E7EB;text-align:right;font-weight:600;background:#d1fae5">'+fmtB(data.fact.Q4)+'</td>';
-    html += '<td style="padding:6px 6px;border:1px solid #E5E7EB;text-align:right;font-weight:700">'+fmtB(data.plan.year)+'</td>';
+    html += '<td id="y-p-'+idx+'" style="padding:6px 6px;border:1px solid #E5E7EB;text-align:right;font-weight:700;cursor:pointer">'+fmtB(data.plan.year)+'</td>'; setTimeout(() => { const td = document.getElementById('y-p-'+idx); if(td) addCommentHandlers(art, 'план', 'год', data.plan.year, td); }, 0);
     html += '<td style="padding:6px 6px;border:1px solid #E5E7EB;text-align:right;font-weight:700;background:#d1fae5">'+fmtB(data.fact.year)+'</td>';
     html += '</tr>';
     // Fact row
     html += '<tr style="background:'+alt+'">';
     html += '<td style="padding:6px 10px;border:1px solid #E5E7EB"></td>';
     html += '<td style="padding:6px 10px;border:1px solid #E5E7EB;text-align:center;font-size:10px;color:#6B7280">факт</td>';
-    data.fact.monthly.forEach(v => { html += '<td style="padding:6px 6px;border:1px solid #E5E7EB;text-align:right;background:#fef3c7">'+fmtB(v)+'</td>'; });
+    data.fact.monthly.forEach((v, i) => { const tdId = 'c-' + idx + '-f-' + i; html += '<td id="'+tdId+'" style="padding:6px 6px;border:1px solid #E5E7EB;text-align:right;background:#fef3c7">'+fmtB(v)+'</td>'; setTimeout(() => { const td = document.getElementById(tdId); if(td) addCommentHandlers(art, 'факт', MONTHS[i], v, td); }, 0); });
     html += '<td style="padding:6px 6px;border:1px solid #E5E7EB"></td>';
     html += '<td style="padding:6px 6px;border:1px solid #E5E7EB"></td>';
     html += '<td style="padding:6px 6px;border:1px solid #E5E7EB"></td>';
@@ -861,6 +930,107 @@ function renderBudgetSummary() {
 
 // Initialize
 load();
+
+// ===== COMMENT SYSTEM =====
+const COMMENT_KEY = 'gf_budget_comments_v1';
+
+function getComments() {
+  try { return JSON.parse(localStorage.getItem(COMMENT_KEY) || '{}'); }
+  catch { return {}; }
+}
+
+function saveComments(comments) {
+  localStorage.setItem(COMMENT_KEY, JSON.stringify(comments));
+}
+
+function getCellKey(article, type, period) {
+  return article + '|' + type + '|' + period;
+}
+
+function openCommentModal(article, type, period, currentValue) {
+  const modal = document.getElementById('comment-modal');
+  const textarea = document.getElementById('comment-text');
+  const authorInput = document.getElementById('comment-author');
+  const title = document.getElementById('comment-modal-title');
+  const deleteBtn = document.getElementById('btn-delete-comment');
+  
+  const comments = getComments();
+  const key = getCellKey(article, type, period);
+  const existing = comments[key] || {};
+  
+  title.textContent = 'Комментарий: ' + article + ' (' + type + ' ' + period + ')';
+  textarea.value = existing.text || '';
+  authorInput.value = existing.author || '';
+  deleteBtn.style.display = existing.text ? 'inline-block' : 'none';
+  
+  modal.classList.add('open');
+  modal.dataset.key = key;
+  modal.dataset.value = currentValue;
+  textarea.focus();
+}
+
+function closeCommentModal() {
+  document.getElementById('comment-modal').classList.remove('open');
+}
+
+document.getElementById('btn-cancel-comment').onclick = closeCommentModal;
+document.getElementById('btn-save-comment').onclick = function() {
+  const modal = document.getElementById('comment-modal');
+  const key = modal.dataset.key;
+  const text = document.getElementById('comment-text').value.trim();
+  const author = document.getElementById('comment-author').value.trim();
+  const comments = getComments();
+  if (text) {
+    comments[key] = { text, author, ts: Date.now() };
+  } else {
+    delete comments[key];
+  }
+  saveComments(comments);
+  closeCommentModal();
+  renderBudget();
+};
+
+document.getElementById('btn-delete-comment').onclick = function() {
+  const modal = document.getElementById('comment-modal');
+  const key = modal.dataset.key;
+  const comments = getComments();
+  delete comments[key];
+  saveComments(comments);
+  closeCommentModal();
+  renderBudget();
+};
+
+document.getElementById('comment-modal').onclick = function(e) {
+  if (e.target === this) closeCommentModal();
+};
+
+function addCommentHandlers(article, type, period, value, tdElement) {
+  const comments = getComments();
+  const key = getCellKey(article, type, period);
+  if (comments[key]) {
+    tdElement.classList.add('cell-has-comment');
+    tdElement.dataset.comment = comments[key].text + (comments[key].author ? ' (' + comments[key].author + ')' : '');
+    tdElement.title = comments[key].text;
+  }
+  tdElement.style.cursor = 'pointer';
+  tdElement.onclick = function() { openCommentModal(article, type, period, value); };
+}
+
 </script>
+
+
+    <div id="comment-modal">
+      <div class="comment-modal-box">
+        <h3 id="comment-modal-title">Комментарий</h3>
+        <textarea id="comment-text" placeholder="Введите комментарий..."></textarea>
+        <input type="text" id="comment-author" placeholder="Ваше имя (необязательно)">
+        <div class="comment-modal-actions">
+          <button class="btn-delete" id="btn-delete-comment" style="display:none">Удалить</button>
+          <button class="btn-cancel" id="btn-cancel-comment">Отмена</button>
+          <button class="btn-save" id="btn-save-comment">Сохранить</button>
+        </div>
+      </div>
+    </div>
+
 </body>
 </html>
