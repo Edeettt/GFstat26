@@ -707,6 +707,7 @@ function initBudgetTabs() {
 
 function renderBudget() {
   const container = document.getElementById('budget-content');
+  document.getElementById('budget-section').style.display = 'block';
   if (currentBudgetTab === 'by-article') {
     renderBudgetByArticle();
   } else {
