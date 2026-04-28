@@ -821,6 +821,18 @@ function fmtB(v) {
   return Number(num).toLocaleString('ru-RU', { maximumFractionDigits: 0 });
 }
 
+function cellColor(val, plan) {
+  // val is fact value, plan is plan value
+  if (!plan && plan !== 0) return '';
+  if (!val && val !== 0) return '';
+  const p = Number(plan), v = Number(val);
+  if (p === 0) return '';
+  const ratio = v / p;
+  if (ratio > 1.05) return 'background:#fef2f2'; // fact > plan by 5%+ → red
+  if (ratio < 0.95) return 'background:#f0fdf4'; // fact < plan by 5%+ → green
+  return '';
+}
+
 function renderBudgetByArticle() {
   const container = document.getElementById('budget-content');
   const months = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
@@ -857,21 +869,21 @@ function renderBudgetByArticle() {
     html += '<td style="padding:6px 10px;border:1px solid #E5E7EB;text-align:center;font-size:10px;color:#6B7280">план</td>';
     data.plan.monthly.forEach((v, i) => { const tdId = 'c-' + idx + '-p-' + i; let extraStyle = ''; if (i === 3 || i === 6 || i === 9) extraStyle = 'border-left:2px solid #9CA3AF;'; html += '<td id="'+tdId+'" style="padding:6px 6px;border:1px solid #E5E7EB;text-align:right;cursor:pointer;'+extraStyle+'">'+fmtB(v)+'</td>'; setTimeout(() => { const td = document.getElementById(tdId); if(td) addCommentHandlers(art, 'план', months[i], v, td); }, 0); });
     html += '<td id="q-p-'+idx+'-Q1" style="padding:6px 6px;border:1px solid #E5E7EB;text-align:right;font-weight:600;cursor:pointer;border-left:2px solid #9CA3AF">'+fmtB(data.plan.Q1)+'</td>'; setTimeout(() => { const td = document.getElementById('q-p-'+idx+'-Q1'); if(td) addCommentHandlers(art, 'план', 'Q1', data.plan.Q1, td); }, 0);
-    html += '<td id="q-f-'+idx+'-Q1" style="padding:6px 6px;border:1px solid #E5E7EB;text-align:right;font-weight:600;background:#d1fae5;cursor:pointer">'+fmtB(data.fact.Q1)+'</td>'; setTimeout(() => { const td = document.getElementById('q-f-'+idx+'-Q1'); if(td) addCommentHandlers(art, 'факт', 'Q1', data.fact.Q1, td); }, 0);
+    html += '<td id="q-f-'+idx+'-Q1" style="padding:6px 6px;border:1px solid #E5E7EB;text-align:right;font-weight:600;cursor:pointer;'+cellColor(data.fact.Q1,data.plan.Q1)+'">'+fmtB(data.fact.Q1)+'</td>'; setTimeout(() => { const td = document.getElementById('q-f-'+idx+'-Q1'); if(td) addCommentHandlers(art, 'факт', 'Q1', data.fact.Q1, td); }, 0);
     html += '<td id="q-p-'+idx+'-Q2" style="padding:6px 6px;border:1px solid #E5E7EB;text-align:right;font-weight:600;cursor:pointer;border-left:2px solid #9CA3AF">'+fmtB(data.plan.Q2)+'</td>'; setTimeout(() => { const td = document.getElementById('q-p-'+idx+'-Q2'); if(td) addCommentHandlers(art, 'план', 'Q2', data.plan.Q2, td); }, 0);
-    html += '<td id="q-f-'+idx+'-Q2" style="padding:6px 6px;border:1px solid #E5E7EB;text-align:right;font-weight:600;background:#d1fae5;cursor:pointer">'+fmtB(data.fact.Q2)+'</td>'; setTimeout(() => { const td = document.getElementById('q-f-'+idx+'-Q2'); if(td) addCommentHandlers(art, 'факт', 'Q2', data.fact.Q2, td); }, 0);
+    html += '<td id="q-f-'+idx+'-Q2" style="padding:6px 6px;border:1px solid #E5E7EB;text-align:right;font-weight:600;cursor:pointer;'+cellColor(data.fact.Q2,data.plan.Q2)+'">'+fmtB(data.fact.Q2)+'</td>'; setTimeout(() => { const td = document.getElementById('q-f-'+idx+'-Q2'); if(td) addCommentHandlers(art, 'факт', 'Q2', data.fact.Q2, td); }, 0);
     html += '<td id="q-p-'+idx+'-Q3" style="padding:6px 6px;border:1px solid #E5E7EB;text-align:right;font-weight:600;cursor:pointer;border-left:2px solid #9CA3AF">'+fmtB(data.plan.Q3)+'</td>'; setTimeout(() => { const td = document.getElementById('q-p-'+idx+'-Q3'); if(td) addCommentHandlers(art, 'план', 'Q3', data.plan.Q3, td); }, 0);
-    html += '<td id="q-f-'+idx+'-Q3" style="padding:6px 6px;border:1px solid #E5E7EB;text-align:right;font-weight:600;background:#d1fae5;cursor:pointer">'+fmtB(data.fact.Q3)+'</td>'; setTimeout(() => { const td = document.getElementById('q-f-'+idx+'-Q3'); if(td) addCommentHandlers(art, 'факт', 'Q3', data.fact.Q3, td); }, 0);
+    html += '<td id="q-f-'+idx+'-Q3" style="padding:6px 6px;border:1px solid #E5E7EB;text-align:right;font-weight:600;cursor:pointer;'+cellColor(data.fact.Q3,data.plan.Q3)+'">'+fmtB(data.fact.Q3)+'</td>'; setTimeout(() => { const td = document.getElementById('q-f-'+idx+'-Q3'); if(td) addCommentHandlers(art, 'факт', 'Q3', data.fact.Q3, td); }, 0);
     html += '<td id="q-p-'+idx+'-Q4" style="padding:6px 6px;border:1px solid #E5E7EB;text-align:right;font-weight:600;cursor:pointer">'+fmtB(data.plan.Q4)+'</td>'; setTimeout(() => { const td = document.getElementById('q-p-'+idx+'-Q4'); if(td) addCommentHandlers(art, 'план', 'Q4', data.plan.Q4, td); }, 0);
-    html += '<td id="q-f-'+idx+'-Q4" style="padding:6px 6px;border:1px solid #E5E7EB;text-align:right;font-weight:600;background:#d1fae5;cursor:pointer">'+fmtB(data.fact.Q4)+'</td>'; setTimeout(() => { const td = document.getElementById('q-f-'+idx+'-Q4'); if(td) addCommentHandlers(art, 'факт', 'Q4', data.fact.Q4, td); }, 0);
+    html += '<td id="q-f-'+idx+'-Q4" style="padding:6px 6px;border:1px solid #E5E7EB;text-align:right;font-weight:600;cursor:pointer;'+cellColor(data.fact.Q4,data.plan.Q4)+'">'+fmtB(data.fact.Q4)+'</td>'; setTimeout(() => { const td = document.getElementById('q-f-'+idx+'-Q4'); if(td) addCommentHandlers(art, 'факт', 'Q4', data.fact.Q4, td); }, 0);
     html += '<td id="y-p-'+idx+'" style="padding:6px 6px;border:1px solid #E5E7EB;text-align:right;font-weight:700;cursor:pointer">'+fmtB(data.plan.year)+'</td>'; setTimeout(() => { const td = document.getElementById('y-p-'+idx); if(td) addCommentHandlers(art, 'план', 'год', data.plan.year, td); }, 0);
-    html += '<td id="y-f-'+idx+'" style="padding:6px 6px;border:1px solid #E5E7EB;text-align:right;font-weight:700;background:#d1fae5;cursor:pointer">'+fmtB(data.fact.year)+'</td>'; setTimeout(() => { const td = document.getElementById('y-f-'+idx); if(td) addCommentHandlers(art, 'факт', 'год', data.fact.year, td); }, 0);
+    html += '<td id="y-f-'+idx+'" style="padding:6px 6px;border:1px solid #E5E7EB;text-align:right;font-weight:700;cursor:pointer;'+cellColor(data.fact.year,data.plan.year)+'">'+fmtB(data.fact.year)+'</td>'; setTimeout(() => { const td = document.getElementById('y-f-'+idx); if(td) addCommentHandlers(art, 'факт', 'год', data.fact.year, td); }, 0);
     html += '</tr>';
     // Fact row
     html += '<tr style="background:'+alt+'">';
     
     html += '<td style="padding:6px 10px;border:1px solid #E5E7EB;text-align:center;font-size:10px;color:#6B7280">факт</td>';
-    data.fact.monthly.forEach((v, i) => { const tdId = 'c-' + idx + '-f-' + i; let extraStyle = ''; if (i === 3 || i === 6 || i === 9) extraStyle = 'border-left:2px solid #9CA3AF;'; html += '<td id="'+tdId+'" style="padding:6px 6px;border:1px solid #E5E7EB;text-align:right;background:#fef3c7;cursor:pointer;'+extraStyle+'">'+fmtB(v)+'</td>'; setTimeout(() => { const td = document.getElementById(tdId); if(td) addCommentHandlers(art, 'факт', months[i], v, td); }, 0); });
+    data.fact.monthly.forEach((v, i) => { const tdId = 'c-' + idx + '-f-' + i; let extraStyle = ''; if (i === 3 || i === 6 || i === 9) extraStyle = 'border-left:2px solid #9CA3AF;'; let colorStyle = cellColor(v, data.plan.monthly[i]); html += '<td id="'+tdId+'" style="padding:6px 6px;border:1px solid #E5E7EB;text-align:right;cursor:pointer;'+extraStyle+colorStyle+'">'+fmtB(v)+'</td>'; setTimeout(() => { const td = document.getElementById(tdId); if(td) addCommentHandlers(art, 'факт', months[i], v, td); }, 0); });
     html += '<td style="padding:6px 6px;border:1px solid #E5E7EB"></td>';
     html += '<td style="padding:6px 6px;border:1px solid #E5E7EB"></td>';
     html += '<td style="padding:6px 6px;border:1px solid #E5E7EB"></td>';
@@ -952,7 +964,7 @@ function renderBudgetSummary() {
   const deltaYear = factYear - planYear;
   const pctYear = planYear > 0 ? (factYear/planYear*100).toFixed(1) : '—';
   const deltaYearStr = deltaYear >= 0 ? '+' + fmtB(deltaYear) : fmtB(deltaYear);
-  html += '<tr style="background:#d1fae5">';
+  html += '<tr style="">';
   html += '<td style="padding:10px 12px;border:1px solid #E5E7EB;font-weight:800">ГОД</td>';
   html += '<td style="padding:10px 12px;border:1px solid #E5E7EB;text-align:right;font-weight:800">'+fmtB(planYear)+'</td>';
   html += '<td style="padding:10px 12px;border:1px solid #E5E7EB;text-align:right;font-weight:800;background:#fef3c7">'+fmtB(factYear)+'</td>';
@@ -1014,13 +1026,16 @@ function closeCommentModal() {
 function addCommentHandlers(article, type, period, value, tdElement) {
   const comments = getComments();
   const key = getCellKey(article, type, period);
-  if (comments[key]) {
-    tdElement.classList.add('cell-has-comment');
-    tdElement.dataset.comment = comments[key].text + (comments[key].author ? ' (' + comments[key].author + ')' : '');
-    tdElement.title = comments[key].text;
-  }
+  const existing = comments[key];
   tdElement.style.cursor = 'pointer';
   tdElement.onclick = function() { openCommentModal(article, type, period, value); };
+  if (existing) {
+    tdElement.dataset.comment = existing.text + (existing.author ? ' (' + existing.author + ')' : '');
+    tdElement.title = existing.text;
+    // Add checkmark in top-right corner using CSS pseudo element via inline style
+    tdElement.style.position = 'relative';
+    tdElement.innerHTML = '<span style="position:relative;display:inline-block;width:100%">'+tdElement.textContent+'</span><span style="position:absolute;top:1px;right:2px;font-size:10px;color:#2DBF6A">✓</span>';
+  }
 }
 
 </script>
