@@ -865,7 +865,7 @@ function renderBudgetByArticle() {
   sorted.forEach(([art, data], idx) => {
     const alt = idx % 2 === 0 ? '#FFFFFF' : '#F7F9F8';
     html += '<tr style="background:'+alt+'">';
-    html += '<td style="padding:6px 10px;border:1px solid #E5E7EB;vertical-align:top"><span style="font-weight:500;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px">'+art+'</span><span style="font-size:10px;color:#6B7280;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:150px">'+data.d+'</span></td>';
+    html += '<td style="padding:6px 10px;border:1px solid #E5E7EB;vertical-align:top;white-space:nowrap" rowspan="2" title="'+art+' — '+data.d+'"><span style="font-weight:500">'+art+'</span><br><span style="font-size:9px;color:#6B7280">'+data.d+'</span></td>';
     html += '<td style="padding:6px 10px;border:1px solid #E5E7EB;text-align:center;font-size:10px;color:#6B7280">план</td>';
     data.plan.monthly.forEach((v, i) => { const tdId = 'c-' + idx + '-p-' + i; let extraStyle = ''; if (i === 3 || i === 6 || i === 9) extraStyle = ''; html += '<td id="'+tdId+'" style="padding:6px 6px;border:1px solid #E5E7EB;text-align:right;cursor:pointer;'+extraStyle+'">'+fmtB(v)+'</td>'; setTimeout(() => { const td = document.getElementById(tdId); if(td) addCommentHandlers(art, 'план', months[i], v, td); }, 0); });
     html += '<td id="q-p-'+idx+'-Q1" style="padding:6px 6px;border:1px solid #E5E7EB;text-align:right;font-weight:600;cursor:pointer;border-left:2px solid #9CA3AF">'+fmtB(data.plan.Q1)+'</td>'; setTimeout(() => { const td = document.getElementById('q-p-'+idx+'-Q1'); if(td) addCommentHandlers(art, 'план', 'Q1', data.plan.Q1, td); }, 0);
