@@ -846,15 +846,14 @@ function renderBudgetByArticle() {
   html += '<th style="padding:8px 10px;border:1px solid #E5E7EB;text-align:center;position:sticky;left:0;z-index:3;background:#F7F9F8;min-width:140px">Статья</th>';
   html += '<th style="padding:8px 10px;border:1px solid #E5E7EB;text-align:center;position:sticky;left:140px;z-index:3;background:#F7F9F8;min-width:50px">Месяц</th>';
   months.forEach((m, i) => { 
-    let align = 'text-align:center'; 
-    if (i === 3 || i === 6 || i === 9) align = 'text-align:center;'; 
-    html += '<th style="padding:8px 6px;border:1px solid #E5E7EB;'+align+'">'+m.substr(0,3)+'</th>'; 
+    let extraPad = (i === 3 || i === 6 || i === 9) ? 'padding-right:20px;' : ''; 
+    html += '<th style="padding:8px 6px;border:1px solid #E5E7EB;text-align:center;'+extraPad+'">'+m.substr(0,3)+'</th>'; 
   });
-  html += '<th style="padding:8px 4px;border:1px solid #E5E7EB;text-align:center;padding-right:16px">Q1 план</th>';
+  html += '<th style="padding:8px 4px;border:1px solid #E5E7EB;text-align:center;padding-right:16px;border-left:3px solid #9CA3AF">Q1 план</th>';
   html += '<th style="padding:8px 4px;border:1px solid #E5E7EB;text-align:center;padding-right:16px">Q1 факт</th>';
-  html += '<th style="padding:8px 4px;border:1px solid #E5E7EB;text-align:center;padding-right:16px">Q2 план</th>';
+  html += '<th style="padding:8px 4px;border:1px solid #E5E7EB;text-align:center;padding-right:16px;border-left:3px solid #9CA3AF">Q2 план</th>';
   html += '<th style="padding:8px 4px;border:1px solid #E5E7EB;text-align:center;padding-right:16px">Q2 факт</th>';
-  html += '<th style="padding:8px 4px;border:1px solid #E5E7EB;text-align:center;padding-right:16px">Q3 план</th>';
+  html += '<th style="padding:8px 4px;border:1px solid #E5E7EB;text-align:center;padding-right:16px;border-left:3px solid #9CA3AF">Q3 план</th>';
   html += '<th style="padding:8px 4px;border:1px solid #E5E7EB;text-align:center;padding-right:16px">Q3 факт</th>';
   html += '<th style="padding:8px 4px;border:1px solid #E5E7EB;text-align:center;padding-right:16px">Q4 план</th>';
   html += '<th style="padding:8px 4px;border:1px solid #E5E7EB;text-align:center;padding-right:16px">Q4 факт</th>';
