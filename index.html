@@ -786,7 +786,9 @@ function renderBudget() {
 
 function fmtB(v) {
   if (!v && v !== 0) return '—';
-  return Number(v).toLocaleString('ru-RU', { maximumFractionDigits: 0 });
+  const num = Number(v);
+  if (num === 0) return '<span style="display:inline-block;width:100%;text-align:center">0</span>';
+  return Number(num).toLocaleString('ru-RU', { maximumFractionDigits: 0 });
 }
 
 function renderBudgetByArticle() {
@@ -799,9 +801,13 @@ function renderBudgetByArticle() {
   
   let html = '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">';
   html += '<thead><tr style="background:#F7F9F8">';
-  html += '<th style="padding:8px 10px;text-align:left;border:1px solid #E5E7EB">Статья</th>';
-  html += '<th style="padding:8px 10px;border:1px solid #E5E7EB">Месяц</th>';
-  months.forEach(m => { html += '<th style="padding:8px 6px;border:1px solid #E5E7EB;text-align:right">'+m.substr(0,3)+'</th>'; });
+  html += '<th style="padding:8px 10px;text-align:center;border:1px solid #E5E7EB">Статья</th>';
+  html += '<th style="padding:8px 10px;border:1px solid #E5E7EB;text-align:center">Месяц</th>';
+  months.forEach((m, i) => { 
+    let align = 'text-align:center'; 
+    if (i === 3 || i === 6 || i === 9) align = 'text-align:right;border-left:2px solid #9CA3AF'; 
+    html += '<th style="padding:8px 6px;border:1px solid #E5E7EB;'+align+'">'+m.substr(0,3)+'</th>'; 
+  });
   html += '<th style="padding:8px 6px;border:1px solid #E5E7EB;text-align:right">Q1 план</th>';
   html += '<th style="padding:8px 6px;border:1px solid #E5E7EB;text-align:right">Q1 факт</th>';
   html += '<th style="padding:8px 6px;border:1px solid #E5E7EB;text-align:right">Q2 план</th>';
@@ -817,14 +823,14 @@ function renderBudgetByArticle() {
   sorted.forEach(([art, data], idx) => {
     const alt = idx % 2 === 0 ? '#FFFFFF' : '#F7F9F8';
     html += '<tr style="background:'+alt+'">';
-    html += '<td style="padding:6px 10px;border:1px solid #E5E7EB"><span style="font-weight:500">'+art+'</span><br><span style="font-size:10px;color:#6B7280">'+data.desc+'</span></td>';
+    html += '<td style="padding:6px 10px;border:1px solid #E5E7EB" rowspan="2"><span style="font-weight:500">'+art+'</span><br><span style="font-size:10px;color:#6B7280">'+data.desc+'</span></td>';
     html += '<td style="padding:6px 10px;border:1px solid #E5E7EB;text-align:center;font-size:10px;color:#6B7280">план</td>';
-    data.plan.monthly.forEach((v, i) => { const tdId = 'c-' + idx + '-p-' + i; html += '<td id="'+tdId+'" style="padding:6px 6px;border:1px solid #E5E7EB;text-align:right">'+fmtB(v)+'</td>'; setTimeout(() => { const td = document.getElementById(tdId); if(td) addCommentHandlers(art, 'план', MONTHS[i], v, td); }, 0); });
-    html += '<td id="q-p-'+idx+'-Q1" style="padding:6px 6px;border:1px solid #E5E7EB;text-align:right;font-weight:600;cursor:pointer">'+fmtB(data.plan.Q1)+'</td>'; setTimeout(() => { const td = document.getElementById('q-p-'+idx+'-Q1'); if(td) addCommentHandlers(art, 'план', 'Q1', data.plan.Q1, td); }, 0);
+    data.plan.monthly.forEach((v, i) => { const tdId = 'c-' + idx + '-p-' + i; let extraStyle = ''; if (i === 3 || i === 6 || i === 9) extraStyle = 'border-left:2px solid #9CA3AF;'; html += '<td id="'+tdId+'" style="padding:6px 6px;border:1px solid #E5E7EB;text-align:right;cursor:pointer;'+extraStyle+'">'+fmtB(v)+'</td>'; setTimeout(() => { const td = document.getElementById(tdId); if(td) addCommentHandlers(art, 'план', months[i], v, td); }, 0); });
+    html += '<td id="q-p-'+idx+'-Q1" style="padding:6px 6px;border:1px solid #E5E7EB;text-align:right;font-weight:600;cursor:pointer;border-left:2px solid #9CA3AF">'+fmtB(data.plan.Q1)+'</td>'; setTimeout(() => { const td = document.getElementById('q-p-'+idx+'-Q1'); if(td) addCommentHandlers(art, 'план', 'Q1', data.plan.Q1, td); }, 0);
     html += '<td id="q-f-'+idx+'-Q1" style="padding:6px 6px;border:1px solid #E5E7EB;text-align:right;font-weight:600;background:#d1fae5;cursor:pointer">'+fmtB(data.fact.Q1)+'</td>'; setTimeout(() => { const td = document.getElementById('q-f-'+idx+'-Q1'); if(td) addCommentHandlers(art, 'факт', 'Q1', data.fact.Q1, td); }, 0);
-    html += '<td id="q-p-'+idx+'-Q2" style="padding:6px 6px;border:1px solid #E5E7EB;text-align:right;font-weight:600;cursor:pointer">'+fmtB(data.plan.Q2)+'</td>'; setTimeout(() => { const td = document.getElementById('q-p-'+idx+'-Q2'); if(td) addCommentHandlers(art, 'план', 'Q2', data.plan.Q2, td); }, 0);
+    html += '<td id="q-p-'+idx+'-Q2" style="padding:6px 6px;border:1px solid #E5E7EB;text-align:right;font-weight:600;cursor:pointer;border-left:2px solid #9CA3AF">'+fmtB(data.plan.Q2)+'</td>'; setTimeout(() => { const td = document.getElementById('q-p-'+idx+'-Q2'); if(td) addCommentHandlers(art, 'план', 'Q2', data.plan.Q2, td); }, 0);
     html += '<td id="q-f-'+idx+'-Q2" style="padding:6px 6px;border:1px solid #E5E7EB;text-align:right;font-weight:600;background:#d1fae5;cursor:pointer">'+fmtB(data.fact.Q2)+'</td>'; setTimeout(() => { const td = document.getElementById('q-f-'+idx+'-Q2'); if(td) addCommentHandlers(art, 'факт', 'Q2', data.fact.Q2, td); }, 0);
-    html += '<td id="q-p-'+idx+'-Q3" style="padding:6px 6px;border:1px solid #E5E7EB;text-align:right;font-weight:600;cursor:pointer">'+fmtB(data.plan.Q3)+'</td>'; setTimeout(() => { const td = document.getElementById('q-p-'+idx+'-Q3'); if(td) addCommentHandlers(art, 'план', 'Q3', data.plan.Q3, td); }, 0);
+    html += '<td id="q-p-'+idx+'-Q3" style="padding:6px 6px;border:1px solid #E5E7EB;text-align:right;font-weight:600;cursor:pointer;border-left:2px solid #9CA3AF">'+fmtB(data.plan.Q3)+'</td>'; setTimeout(() => { const td = document.getElementById('q-p-'+idx+'-Q3'); if(td) addCommentHandlers(art, 'план', 'Q3', data.plan.Q3, td); }, 0);
     html += '<td id="q-f-'+idx+'-Q3" style="padding:6px 6px;border:1px solid #E5E7EB;text-align:right;font-weight:600;background:#d1fae5;cursor:pointer">'+fmtB(data.fact.Q3)+'</td>'; setTimeout(() => { const td = document.getElementById('q-f-'+idx+'-Q3'); if(td) addCommentHandlers(art, 'факт', 'Q3', data.fact.Q3, td); }, 0);
     html += '<td id="q-p-'+idx+'-Q4" style="padding:6px 6px;border:1px solid #E5E7EB;text-align:right;font-weight:600;cursor:pointer">'+fmtB(data.plan.Q4)+'</td>'; setTimeout(() => { const td = document.getElementById('q-p-'+idx+'-Q4'); if(td) addCommentHandlers(art, 'план', 'Q4', data.plan.Q4, td); }, 0);
     html += '<td id="q-f-'+idx+'-Q4" style="padding:6px 6px;border:1px solid #E5E7EB;text-align:right;font-weight:600;background:#d1fae5;cursor:pointer">'+fmtB(data.fact.Q4)+'</td>'; setTimeout(() => { const td = document.getElementById('q-f-'+idx+'-Q4'); if(td) addCommentHandlers(art, 'факт', 'Q4', data.fact.Q4, td); }, 0);
@@ -833,9 +839,9 @@ function renderBudgetByArticle() {
     html += '</tr>';
     // Fact row
     html += '<tr style="background:'+alt+'">';
-    html += '<td style="padding:6px 10px;border:1px solid #E5E7EB"></td>';
+    
     html += '<td style="padding:6px 10px;border:1px solid #E5E7EB;text-align:center;font-size:10px;color:#6B7280">факт</td>';
-    data.fact.monthly.forEach((v, i) => { const tdId = 'c-' + idx + '-f-' + i; html += '<td id="'+tdId+'" style="padding:6px 6px;border:1px solid #E5E7EB;text-align:right;background:#fef3c7">'+fmtB(v)+'</td>'; setTimeout(() => { const td = document.getElementById(tdId); if(td) addCommentHandlers(art, 'факт', MONTHS[i], v, td); }, 0); });
+    data.fact.monthly.forEach((v, i) => { const tdId = 'c-' + idx + '-f-' + i; let extraStyle = ''; if (i === 3 || i === 6 || i === 9) extraStyle = 'border-left:2px solid #9CA3AF;'; html += '<td id="'+tdId+'" style="padding:6px 6px;border:1px solid #E5E7EB;text-align:right;background:#fef3c7;cursor:pointer;'+extraStyle+'">'+fmtB(v)+'</td>'; setTimeout(() => { const td = document.getElementById(tdId); if(td) addCommentHandlers(art, 'факт', months[i], v, td); }, 0); });
     html += '<td style="padding:6px 6px;border:1px solid #E5E7EB"></td>';
     html += '<td style="padding:6px 6px;border:1px solid #E5E7EB"></td>';
     html += '<td style="padding:6px 6px;border:1px solid #E5E7EB"></td>';
