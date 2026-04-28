@@ -967,13 +967,42 @@ function openCommentModal(article, type, period, currentValue) {
   modal.dataset.key = key;
   modal.dataset.value = currentValue;
   textarea.focus();
-  
-  
-  
+}
 
+function closeCommentModal() {
+  document.getElementById('comment-modal').classList.remove('open');
+}
 
+document.getElementById('btn-cancel-comment').onclick = closeCommentModal;
+document.getElementById('btn-save-comment').onclick = function() {
+  const modal = document.getElementById('comment-modal');
+  const key = modal.dataset.key;
+  const text = document.getElementById('comment-text').value.trim();
+  const author = document.getElementById('comment-author').value.trim();
+  const comments = getComments();
+  if (text) {
+    comments[key] = { text, author, ts: Date.now() };
+  } else {
+    delete comments[key];
+  }
+  saveComments(comments);
+  closeCommentModal();
+  renderBudget();
+};
 
+document.getElementById('btn-delete-comment').onclick = function() {
+  const modal = document.getElementById('comment-modal');
+  const key = modal.dataset.key;
+  const comments = getComments();
+  delete comments[key];
+  saveComments(comments);
+  closeCommentModal();
+  renderBudget();
+};
 
+document.getElementById('comment-modal').onclick = function(e) {
+  if (e.target === this) closeCommentModal();
+};
 
 function addCommentHandlers(article, type, period, value, tdElement) {
   const comments = getComments();
