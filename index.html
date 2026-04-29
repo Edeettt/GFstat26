@@ -840,7 +840,7 @@ function renderBudgetByArticle() {
   const quarters = ['Q1','Q2','Q3','Q4'];
   
   // Sort articles by plan yearly descending
-  const BOTTOM_ORDER = ['Заработная плата_ДДС', 'Оплата за аутсорсинг и аутстаффинг персонала', 'Уплата ПФР', 'Уплата НДФЛ', 'Резерв отпусков', 'KPI, премии_ДДС', 'Оплата сырья'];
+  const BOTTOM_ORDER = ['Заработная плата_ДДС', 'Оплата за аутсорсинг и аутстаффинг персонала', 'Оплата за аутсорсинг и аутстаффинг персонала: прочие выплаты (комиссии, налоги и т.п)', 'Уплата ПФР', 'Уплата НДФЛ', 'Резерв отпусков', 'KPI, премии_ДДС', 'Оплата сырья'];
   const sorted = Object.entries(BUDGET_DATA).sort((a, b) => {
     const aIdx = BOTTOM_ORDER.indexOf(a[0]);
     const bIdx = BOTTOM_ORDER.indexOf(b[0]);
