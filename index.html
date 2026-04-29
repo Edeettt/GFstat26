@@ -893,15 +893,15 @@ function renderBudgetByArticle() {
     html += '<td style="padding:6px 10px;text-align:center;font-size:10px;color:#6B7280;background:#FFFFFF">факт</td>';
     data.fact.monthly.forEach((v, i) => { const tdId = 'c-' + idx + '-f-' + i; let extraStyle = (i === 3 || i === 6 || i === 9) ? 'border-left:3px solid #999;' : ''; let colorStyle = cellColor(v, data.plan.monthly[i]); html += '<td id="'+tdId+'" style="padding:6px 4px;border:1px solid #E5E7EB;text-align:center;cursor:pointer;'+extraStyle+colorStyle+';background:#FFFFFF">'+fmtB(v)+'</td>'; setTimeout(() => { const td = document.getElementById(tdId); if(td) addCommentHandlers(art, 'факт', months[i], v, td); }, 0); });
     // Fill in Q1-Q4 and year cells (empty for fact since rowspan covers them)
-    html += '<td style="padding:6px 4px;border:1px solid #E5E7EB;background:#FFFFFF"></td>'; // Q1 fact
+    html += '<td style="padding:6px 4px;border:1px solid #E5E7EB;border-right:3px solid #999;background:#FFFFFF"></td>'; // Q1 fact
     html += '<td style="padding:6px 4px;border:1px solid #E5E7EB;background:#FFFFFF"></td>'; // Q2 plan
-    html += '<td style="padding:6px 4px;border:1px solid #E5E7EB;background:#FFFFFF"></td>'; // Q2 fact
+    html += '<td style="padding:6px 4px;border:1px solid #E5E7EB;border-right:3px solid #999;background:#FFFFFF"></td>'; // Q2 fact
     html += '<td style="padding:6px 4px;border:1px solid #E5E7EB;background:#FFFFFF"></td>'; // Q3 plan
-    html += '<td style="padding:6px 4px;border:1px solid #E5E7EB;background:#FFFFFF"></td>'; // Q3 fact
+    html += '<td style="padding:6px 4px;border:1px solid #E5E7EB;border-right:3px solid #999;background:#FFFFFF"></td>'; // Q3 fact
     html += '<td style="padding:6px 4px;border:1px solid #E5E7EB;background:#FFFFFF"></td>'; // Q4 plan
-    html += '<td style="padding:6px 4px;border:1px solid #E5E7EB;background:#FFFFFF"></td>'; // Q4 fact
+    html += '<td style="padding:6px 4px;border:1px solid #E5E7EB;border-right:3px solid #999;background:#FFFFFF"></td>'; // Q4 fact
     html += '<td style="padding:6px 4px;border:1px solid #E5E7EB;background:#FFFFFF"></td>'; // Year plan
-    html += '<td style="padding:6px 4px;border:1px solid #E5E7EB;background:#FFFFFF"></td>'; // Year fact
+    html += '<td style="padding:6px 4px;border:1px solid #E5E7EB;border-right:3px solid #999;background:#FFFFFF"></td>'; // Year fact
     html += '</tr>';
   });
   
