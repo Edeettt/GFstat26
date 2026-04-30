@@ -392,12 +392,12 @@ function getCurrentMonthSum(metric) {
 // Aggregate all daily values into 12 weeks (week 1 = days 1-7, week 2 = days 8-14, etc.)
 function aggregateAllDaysToWeeks() {
   const weeks = [];
-  const weekData = { 'ГФ/Приём': [], 'Ритейл': [], 'LAAS': [], 'Приведённая производительность': [] };
-  const metrics = ['ГФ/Приём', 'Ритейл', 'LAAS', 'Приведённая производительность'];
+  const weekData = { 'ГФ/Приём': [], 'Ритейл': [], 'Приём (обработано коробок)': [], 'LAAS': [], 'Приведённая производительность': [] };
+  const metrics = ['ГФ/Приём', 'Ритейл', 'Приём (обработано коробок)', 'LAAS', 'Приведённая производительность'];
   
   // Collect ALL non-zero values in chronological order across all months
   // This avoids the month-length mixing problem
-  const allOrderedValues = { 'ГФ/Приём': [], 'Ритейл': [], 'LAAS': [], 'Приведённая производительность': [] };
+  const allOrderedValues = { 'ГФ/Приём': [], 'Ритейл': [], 'Приём (обработано коробок)': [], 'LAAS': [], 'Приведённая производительность': [] };
   
   // Iterate through months in calendar order, collecting all non-zero values
   getAllMonths().forEach(month => {
@@ -439,6 +439,54 @@ function aggregateAllDaysToWeeks() {
   });
   
   return { labels: weeks, data: weekData };
+}
+
+// Aggregate all daily plan values into weeks (last 12 weeks)
+function aggregateAllDaysToWeeksPlan() {
+  const planMetrics = ['План - ГФ/Приём', 'План - Ритейл', 'План - LAAS'];
+  const result = { 'ГФ/Приём': [], 'Ритейл': [], 'LAAS': [] };
+  
+  // Collect plan values in chronological order
+  const allOrderedPlan = { 'План - ГФ/Приём': [], 'План - Ритейл': [], 'План - LAAS': [] };
+  
+  getAllMonths().forEach(month => {
+    planMetrics.forEach(metric => {
+      const entries = getEntries(metric).filter(e => getMonthKey(e.month) === month);
+      entries.forEach(e => {
+        if (Array.isArray(e.values)) {
+          e.values.forEach(v => {
+            if (typeof v === 'number' && v > 0) {
+              allOrderedPlan[metric].push(v);
+            }
+          });
+        }
+      });
+    });
+  });
+  
+  const totalDays = allOrderedPlan['План - ГФ/Приём'].length;
+  for (let i = 0; i < totalDays; i += 7) {
+    const weekIdx = Math.floor(i / 7);
+    // ГФ/Приём plan
+    const gfSlice = allOrderedPlan['План - ГФ/Приём'].slice(i, i + 7);
+    if (!result['ГФ/Приём'][weekIdx]) result['ГФ/Приём'][weekIdx] = 0;
+    result['ГФ/Приём'][weekIdx] += sum(gfSlice.filter(v => typeof v === 'number' && v > 0));
+    // Ритейл plan
+    const retailSlice = allOrderedPlan['План - Ритейл'].slice(i, i + 7);
+    if (!result['Ритейл'][weekIdx]) result['Ритейл'][weekIdx] = 0;
+    result['Ритейл'][weekIdx] += sum(retailSlice.filter(v => typeof v === 'number' && v > 0));
+    // LAAS plan
+    const laasSlice = allOrderedPlan['План - LAAS'].slice(i, i + 7);
+    if (!result['LAAS'][weekIdx]) result['LAAS'][weekIdx] = 0;
+    result['LAAS'][weekIdx] += sum(laasSlice.filter(v => typeof v === 'number' && v > 0));
+  }
+  
+  // Slice to last 12 weeks
+  Object.keys(result).forEach(k => {
+    result[k] = result[k].slice(-12);
+  });
+  
+  return result;
 }
 
 // ============ RENDER ============
@@ -547,12 +595,24 @@ function getChartConfig() {
 
 function getDayChartConfig(currentMonth) {
   const monthKey = Object.entries(MONTH_NAMES).find(([k, v]) => v === currentMonth)?.[0] || '🌱 Текущий месяц';
-  const entries = getEntries('ГФ/Приём').filter(e => e.month === monthKey || getMonthKey(e.month) === currentMonth);
+  const gfEntries = getEntries('ГФ/Приём').filter(e => e.month === monthKey || getMonthKey(e.month) === currentMonth);
+  const retailEntries = getEntries('Ритейл').filter(e => e.month === monthKey || getMonthKey(e.month) === currentMonth);
+  const boxesEntries = getEntries('Приём (обработано коробок)').filter(e => e.month === monthKey || getMonthKey(e.month) === currentMonth);
+  const laasEntries = getEntries('LAAS').filter(e => e.month === monthKey || getMonthKey(e.month) === currentMonth);
+  const planGfEntries = getEntries('План - ГФ/Приём').filter(e => e.month === monthKey || getMonthKey(e.month) === currentMonth);
+  const planRetailEntries = getEntries('План - Ритейл').filter(e => e.month === monthKey || getMonthKey(e.month) === currentMonth);
+  const planLaasEntries = getEntries('План - LAAS').filter(e => e.month === monthKey || getMonthKey(e.month) === currentMonth);
   
   let days = [];
-  if (entries.length) {
-    days = entries[0].values.map((_, i) => i + 1);
+  if (gfEntries.length) {
+    days = gfEntries[0].values.map((_, i) => i + 1);
   }
+  
+  const makeData = (entries, fallbackEntries) => {
+    if (entries.length) return entries[0].values.map(v => typeof v === 'number' && v > 0 ? v : null);
+    if (fallbackEntries.length) return fallbackEntries[0].values.map(v => typeof v === 'number' && v > 0 ? v : null);
+    return [];
+  };
   
   return [
     {
@@ -560,11 +620,34 @@ function getDayChartConfig(currentMonth) {
       type: 'bar',
       labels: days.map(d => d),
       datasets: [
-        {
-          label: 'ГФ/Приём',
-          data: entries.length ? entries[0].values.map(v => typeof v === 'number' && v > 0 ? v : 0) : [],
-          backgroundColor: '#6366f1'
-        }
+        { label: 'ГФ/Приём', data: makeData(gfEntries, []), backgroundColor: '#6366f1' },
+        { label: 'План', data: makeData(planGfEntries, []), backgroundColor: '#d1d5db' }
+      ]
+    },
+    {
+      title: `Ритейл — ${currentMonth}`,
+      type: 'bar',
+      labels: days.map(d => d),
+      datasets: [
+        { label: 'Ритейл', data: makeData(retailEntries, []), backgroundColor: '#22d3ee' },
+        { label: 'План', data: makeData(planRetailEntries, []), backgroundColor: '#d1d5db' }
+      ]
+    },
+    {
+      title: `Приём (обработано коробок) — ${currentMonth}`,
+      type: 'bar',
+      labels: days.map(d => d),
+      datasets: [
+        { label: 'Приём (коробок)', data: makeData(boxesEntries, []), backgroundColor: '#a78bfa' }
+      ]
+    },
+    {
+      title: `LAAS — ${currentMonth}`,
+      type: 'bar',
+      labels: days.map(d => d),
+      datasets: [
+        { label: 'LAAS', data: makeData(laasEntries, []), backgroundColor: '#f59e0b' },
+        { label: 'План', data: makeData(planLaasEntries, []), backgroundColor: '#d1d5db' }
       ]
     }
   ];
@@ -572,31 +655,59 @@ function getDayChartConfig(currentMonth) {
 
 function getWeekChartConfig() {
   const { labels, data } = aggregateAllDaysToWeeks();
+  const weekPlans = aggregateAllDaysToWeeksPlan();
   
   return [
     {
-      title: 'ГФ/Приём по неделям (последние 12 недель)',
+      title: 'ГФ/Приём по неделям',
       type: 'bar',
       labels: labels,
-      datasets: [{
-        label: 'ГФ/Приём',
-        data: data['ГФ/Приём'],
-        backgroundColor: '#6366f1'
-      }]
+      datasets: [
+        { label: 'ГФ/Приём', data: data['ГФ/Приём'], backgroundColor: '#6366f1' },
+        { label: 'План', data: weekPlans['ГФ/Приём'] || [], backgroundColor: '#d1d5db' }
+      ]
     },
     {
       title: 'Ритейл по неделям',
       type: 'bar',
       labels: labels,
-      datasets: [{
-        label: 'Ритейл',
-        data: data['Ритейл'],
-        backgroundColor: '#22d3ee'
-      }]
+      datasets: [
+        { label: 'Ритейл', data: data['Ритейл'], backgroundColor: '#22d3ee' },
+        { label: 'План', data: weekPlans['Ритейл'] || [], backgroundColor: '#d1d5db' }
+      ]
+    },
+    {
+      title: 'Приём (обработано коробок) по неделям',
+      type: 'bar',
+      labels: labels,
+      datasets: [
+        { label: 'Коробки', data: data['Приём (обработано коробок)'], backgroundColor: '#a78bfa' }
+      ]
     },
     {
       title: 'LAAS по неделям',
       type: 'bar',
+      labels: labels,
+      datasets: [
+        { label: 'LAAS', data: data['LAAS'], backgroundColor: '#f59e0b' },
+        { label: 'План', data: weekPlans['LAAS'] || [], backgroundColor: '#d1d5db' }
+      ]
+    },
+    {
+      title: 'Производительность (линия)',
+      type: 'line',
+      labels: labels,
+      datasets: [{
+        label: 'Прив. производительность',
+        data: data['Приведённая производительность'].map(v => Math.round(v / 40)),
+        borderColor: '#4ade80',
+        backgroundColor: '#4ade8033',
+        fill: true,
+        tension: 0.3
+      }]
+    }
+  ];
+}
       labels: labels,
       datasets: [{
         label: 'LAAS',
@@ -638,6 +749,14 @@ function getMonthChartConfig(months) {
       datasets: [
         { label: 'Ритейл', data: months.map(m => calcMonthTotal('Ритейл', m)), backgroundColor: '#22d3ee' },
         { label: 'План', data: months.map(m => calcMonthTotal('План - Ритейл', m)), backgroundColor: '#d1d5db' }
+      ]
+    },
+    {
+      title: 'Приём (обработано коробок) (месяцы)',
+      type: 'bar',
+      labels: months,
+      datasets: [
+        { label: 'Коробки', data: months.map(m => calcMonthTotal('Приём (обработано коробок)', m)), backgroundColor: '#a78bfa' }
       ]
     },
     {
