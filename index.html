@@ -708,28 +708,6 @@ function getWeekChartConfig() {
     }
   ];
 }
-      labels: labels,
-      datasets: [{
-        label: 'LAAS',
-        data: data['LAAS'],
-        backgroundColor: '#f59e0b'
-      }]
-    },
-    {
-      title: 'Производительность (линия)',
-      type: 'line',
-      labels: labels,
-      datasets: [{
-        label: 'Прив. производительность',
-        data: data['Приведённая производительность'].map(v => Math.round(v / 40)),
-        borderColor: '#4ade80',
-        backgroundColor: '#4ade8033',
-        fill: true,
-        tension: 0.3
-      }]
-    }
-  ];
-}
 
 function getMonthChartConfig(months) {
   return [
