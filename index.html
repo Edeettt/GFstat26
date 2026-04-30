@@ -443,11 +443,11 @@ function aggregateAllDaysToWeeks() {
 
 // Aggregate all daily plan values into weeks (last 12 weeks)
 function aggregateAllDaysToWeeksPlan() {
-  const planMetrics = ['План - ГФ/Приём', 'План - Ритейл', 'План - LAAS'];
-  const result = { 'ГФ/Приём': [], 'Ритейл': [], 'LAAS': [] };
+  const planMetrics = ['План - ГФ/Приём', 'План - Ритейл', 'План - Приём (обработано коробок)', 'План - LAAS'];
+  const result = { 'ГФ/Приём': [], 'Ритейл': [], 'Приём (обработано коробок)': [], 'LAAS': [] };
   
   // Collect plan values in chronological order
-  const allOrderedPlan = { 'План - ГФ/Приём': [], 'План - Ритейл': [], 'План - LAAS': [] };
+  const allOrderedPlan = { 'План - ГФ/Приём': [], 'План - Ритейл': [], 'План - Приём (обработано коробок)': [], 'План - LAAS': [] };
   
   getAllMonths().forEach(month => {
     planMetrics.forEach(metric => {
@@ -475,6 +475,10 @@ function aggregateAllDaysToWeeksPlan() {
     const retailSlice = allOrderedPlan['План - Ритейл'].slice(i, i + 7);
     if (!result['Ритейл'][weekIdx]) result['Ритейл'][weekIdx] = 0;
     result['Ритейл'][weekIdx] += sum(retailSlice.filter(v => typeof v === 'number' && v > 0));
+    // Приём (коробок) plan
+    const boxesSlice = allOrderedPlan['План - Приём (обработано коробок)'].slice(i, i + 7);
+    if (!result['Приём (обработано коробок)'][weekIdx]) result['Приём (обработано коробок)'][weekIdx] = 0;
+    result['Приём (обработано коробок)'][weekIdx] += sum(boxesSlice.filter(v => typeof v === 'number' && v > 0));
     // LAAS plan
     const laasSlice = allOrderedPlan['План - LAAS'].slice(i, i + 7);
     if (!result['LAAS'][weekIdx]) result['LAAS'][weekIdx] = 0;
@@ -598,6 +602,7 @@ function getDayChartConfig(currentMonth) {
   const gfEntries = getEntries('ГФ/Приём').filter(e => e.month === monthKey || getMonthKey(e.month) === currentMonth);
   const retailEntries = getEntries('Ритейл').filter(e => e.month === monthKey || getMonthKey(e.month) === currentMonth);
   const boxesEntries = getEntries('Приём (обработано коробок)').filter(e => e.month === monthKey || getMonthKey(e.month) === currentMonth);
+  const planBoxesEntries = getEntries('План - Приём (обработано коробок)').filter(e => e.month === monthKey || getMonthKey(e.month) === currentMonth);
   const laasEntries = getEntries('LAAS').filter(e => e.month === monthKey || getMonthKey(e.month) === currentMonth);
   const planGfEntries = getEntries('План - ГФ/Приём').filter(e => e.month === monthKey || getMonthKey(e.month) === currentMonth);
   const planRetailEntries = getEntries('План - Ритейл').filter(e => e.month === monthKey || getMonthKey(e.month) === currentMonth);
@@ -638,7 +643,8 @@ function getDayChartConfig(currentMonth) {
       type: 'bar',
       labels: days.map(d => d),
       datasets: [
-        { label: 'Приём (коробок)', data: makeData(boxesEntries, []), backgroundColor: '#a78bfa' }
+        { label: 'Приём (коробок)', data: makeData(boxesEntries, []), backgroundColor: '#a78bfa' },
+        { label: 'План', data: makeData(planBoxesEntries, []), backgroundColor: '#d1d5db' }
       ]
     },
     {
@@ -681,7 +687,8 @@ function getWeekChartConfig() {
       type: 'bar',
       labels: labels,
       datasets: [
-        { label: 'Коробки', data: data['Приём (обработано коробок)'], backgroundColor: '#a78bfa' }
+        { label: 'Коробки', data: data['Приём (обработано коробок)'], backgroundColor: '#a78bfa' },
+        { label: 'План', data: weekPlans['Приём (обработано коробок)'] || [], backgroundColor: '#d1d5db' }
       ]
     },
     {
@@ -734,7 +741,8 @@ function getMonthChartConfig(months) {
       type: 'bar',
       labels: months,
       datasets: [
-        { label: 'Коробки', data: months.map(m => calcMonthTotal('Приём (обработано коробок)', m)), backgroundColor: '#a78bfa' }
+        { label: 'Коробки', data: months.map(m => calcMonthTotal('Приём (обработано коробок)', m)), backgroundColor: '#a78bfa' },
+        { label: 'План', data: months.map(m => calcMonthTotal('План - Приём (обработано коробок)', m)), backgroundColor: '#d1d5db' }
       ]
     },
     {
